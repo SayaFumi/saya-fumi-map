@@ -311,7 +311,26 @@
             btn.disabled = false;
           });
       }
+      
+      // ★不足していた関数を追加
+      function fetchDataAndDraw() {
+        toggleLoading(true);
+        callGAS('getTravelData')
+          .then(data => {
+            savedRecords = data || [];
+            drawMap();
+            updateStats();
+            updateRegionSelect();
+            renderList();
+            toggleLoading(false);
+          })
+          .catch(err => {
+            alert('データ更新失敗: ' + err.message);
+            toggleLoading(false);
+          });
+      }
 
+      // 共通ヘルパー
       function getMapKey() {
         const keys = Object.keys(Highcharts.maps);
         if(currentMap === 'world') return keys.find(k => k.indexOf('world')!==-1) || 'custom/world';
@@ -352,6 +371,7 @@
       }
       function getColorForKey(key, record) {
         if (record && record.tags && record.tags.includes('行きたい')) return WISH_COLOR;
+        if (!key) return COLOR_PALETTE[0];
         let hash = 0; for (let i=0; i<key.length; i++) hash = key.charCodeAt(i) + ((hash<<5)-hash);
         return COLOR_PALETTE[Math.abs(hash)%COLOR_PALETTE.length];
       }
@@ -443,7 +463,7 @@
         chart = Highcharts.mapChart('map-container', {
             chart: { map: mapKey, backgroundColor: '#e0f7fa' },
             accessibility: { enabled: false },
-            exporting: { enabled: false }, 
+            exporting: { enabled: false },
             title: { text: null },
             mapNavigation: { enabled: true, buttonOptions: { verticalAlign: 'bottom' }, enableDoubleClickZoomTo: true },
             tooltip: { enabled: false },
@@ -532,8 +552,10 @@
         document.getElementById('edit-id').value = '';
         document.getElementById('edit-original-photo-ids').value = '';
         document.querySelectorAll('.tag-checkbox').forEach(c => c.checked = false);
-        document.getElementById('photo-preview-area').innerHTML = '';
-        document.getElementById('photo-help-msg').innerText = '';
+        const previewArea = document.getElementById('photo-preview-area');
+        if(previewArea) previewArea.innerHTML = '';
+        const msgArea = document.getElementById('photo-help-msg');
+        if(msgArea) msgArea.innerText = '';
 
         const safeDate = (v) => (v && v.length>=10) ? v.substring(0,10) : '';
         let targetKey = editData ? editData.regionKey : preSelectedKey;
@@ -559,7 +581,7 @@
             document.getElementById('end-date-input').value = safeDate(editData.endDate);
             document.getElementById('memo-input').value = editData.memo || '';
             if(editData.tags) editData.tags.forEach(t => { const c=document.getElementById('tag-'+t); if(c) c.checked=true; });
-            if(photoIds.length > 0) document.getElementById('photo-help-msg').innerText = `※保存済みの写真${photoIds.length}枚は維持されます。`;
+            if(photoIds.length > 0 && msgArea) msgArea.innerText = `※保存済みの写真${photoIds.length}枚は維持されます。`;
         } else {
             document.getElementById('form-title').innerText = '思い出を記録';
             const today = new Date().toISOString().split('T')[0];
@@ -643,7 +665,6 @@
                 };
                 if(!params.regionKey) { alert('場所を選択してください'); toggleLoading(false); return; }
                 
-                // ★修正: submitToGASではなく、callGASを使って直接送信するように変更（参照エラー回避）
                 callGAS('saveRecord', params)
                     .then(res => {
                         closeModal();
@@ -660,8 +681,6 @@
             });
         });
       }
-
-      // 古い submitToGAS は削除し、setupForm内で完結させました
 
       function renderList() {
         const container = document.getElementById('timeline-container');
