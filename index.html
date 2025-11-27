@@ -1,26 +1,24 @@
 <!DOCTYPE html>
 <html lang="ja">
-
-<head>
+  <head>
     <meta charset="UTF-8">
     <title>SayaFumi Map</title>
-
+    
     <!-- ■ 設定: ここにGASのウェブアプリURLを貼り付けてください -->
     <script>
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwkJW9E6fDCPNXIOL3t7UDdtaP29kzDNRs8h-6CMoOwCmlt7zMGb0ec5Z636Jesk-LxJg/exec"; 
+      const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwkJW9E6fDCPNXIOL3t7UDdtaP29kzDNRs8h-6CMoOwCmlt7zMGb0ec5Z636Jesk-LxJg/exec"; 
     </script>
 
     <!-- PWA・スマホ設定 -->
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SayaFumi Map">
     <meta name="theme-color" content="#e0f7fa">
-
-    <!-- アプリアイコン (適宜変更可) -->
-    <link rel="apple-touch-icon" href="https://img.icons8.com/color/144/000000/map-pin.png">
-    <link rel="icon" type="image/png" href="https://img.icons8.com/color/144/000000/map-pin.png">
+    
+    <!-- アプリアイコン -->
+    <link rel="apple-touch-icon" href="./icon.png">
+    <link rel="icon" type="image/png" href="./icon.png">
 
     <!-- ライブラリ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.3.15/proj4.js"></script>
@@ -30,1059 +28,610 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 
-    <!-- CSS -->
     <style>
-        :root {
-            --primary: #00bcd4;
-            --dark: #0097a7;
-            --accent: #80deea;
-            --bg: #e0f7fa;
-            --white: #fff;
-            --text: #37474f;
-        }
+      :root { --primary: #00bcd4; --dark: #0097a7; --accent: #80deea; --bg: #e0f7fa; --white: #fff; --text: #37474f; }
+      body { margin: 0; font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
+      
+      /* Login */
+      #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+      .login-box { background: var(--white); padding: 30px; border-radius: 15px; text-align: center; width: 80%; max-width: 300px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+      .login-box input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #b2ebf2; border-radius: 8px; box-sizing: border-box; text-align: center; font-size: 16px; }
+      .login-box button { width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+      
+      .hidden-app { opacity: 0; pointer-events: none; }
+      .visible-app { opacity: 1; pointer-events: auto; transition: opacity 0.5s; }
 
-        body {
-            margin: 0;
-            font-family: 'Noto Sans JP', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            overflow: hidden;
-            height: 100vh;
-        }
+      /* Header */
+      header { position: absolute; top: 0; left: 0; width: 100%; height: 50px; background: rgba(255,255,255,0.95); z-index: 10; display: flex; justify-content: center; align-items: center; padding-top: env(safe-area-inset-top); box-shadow: 0 1px 0 rgba(0,0,0,0.05); }
+      h1 { margin: 0; font-size: 1.1rem; color: var(--dark); }
+      
+      .view-switcher { position: absolute; right: 10px; top: env(safe-area-inset-top); height: 50px; display: flex; align-items: center; }
+      .view-switcher button { background: transparent; border: none; color: #b0bec5; padding: 10px; cursor: pointer; }
+      .view-switcher button.active { color: var(--primary); }
 
-        /* Login */
-        #login-screen {
-            position: fixed;
-            inset: 0;
-            background: var(--bg);
-            z-index: 9999;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+      /* Controls */
+      .controls-container { position: absolute; top: calc(50px + env(safe-area-inset-top)); left: 0; width: 100%; height: 50px; background: rgba(255,255,255,0.85); backdrop-filter: blur(4px); z-index: 9; display: flex; align-items: center; padding: 0 15px; box-sizing: border-box; justify-content: space-between; }
+      #stats-bar { flex: 1; margin-right: 15px; max-width: 200px; }
+      .stats-content { display: flex; gap: 8px; font-size: 0.8rem; color: var(--dark); font-weight: bold; margin-bottom: 3px; }
+      .progress-bg { width: 100%; height: 6px; background: rgba(0,188,212,0.15); border-radius: 3px; overflow: hidden; }
+      #progress-fill { height: 100%; background: var(--primary); transition: width 0.5s ease-out; }
+      
+      .map-controls { display: flex; flex-shrink: 0; }
+      .map-switcher-btn { background: white; border: 1px solid var(--primary); color: var(--primary); padding: 5px 15px; font-size: 0.85rem; margin-left: 8px; border-radius: 20px; cursor: pointer; transition: 0.2s; }
+      .map-switcher-btn.active { background: var(--primary); color: white; }
 
-        .login-box {
-            background: var(--white);
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            width: 80%;
-            max-width: 300px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
+      /* Views */
+      .view-content { display: none; width: 100%; height: 100vh; box-sizing: border-box; }
+      .view-content.active { display: block; }
+      #view-map { padding-top: 0; }
+      #map-container { width: 100%; height: 100vh; z-index: 1; }
+      #view-list { padding-top: calc(100px + env(safe-area-inset-top)); background: var(--bg); overflow-y: auto; padding-bottom: 80px; }
+      
+      .filter-bar { padding: 10px 20px; text-align: right; margin-top: 10px; }
+      #tag-filter { padding: 5px; border-radius: 5px; border: 1px solid #b2ebf2; font-size: 14px; }
+      #timeline-container { padding: 0 15px; max-width: 600px; margin: 0 auto; }
+      
+      .timeline-card { background: var(--white); border-radius: 10px; padding: 15px; margin-bottom: 15px; display: flex; gap: 15px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+      .card-thumb { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; background: #eee; flex-shrink: 0; }
+      .card-content { flex-grow: 1; overflow: hidden; }
+      .card-title { font-size: 1rem; font-weight: bold; margin-bottom: 5px; }
+      .card-date { font-size: 0.8rem; color: #888; margin-bottom: 5px; }
+      .card-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+      .tag-chip { font-size: 0.7rem; background: #e0f2f1; color: #00695c; padding: 2px 8px; border-radius: 10px; }
 
-        .login-box input {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid #b2ebf2;
-            border-radius: 8px;
-            box-sizing: border-box;
-            text-align: center;
-            font-size: 16px;
-        }
+      /* FAB */
+      #fab-add { position: absolute; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: var(--primary); color: white; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; display: flex; justify-content: center; align-items: center; z-index: 20; padding-bottom: env(safe-area-inset-bottom); }
 
-        .login-box button {
-            width: 100%;
-            padding: 10px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-        }
+      /* Modal */
+      #modal-overlay, #detail-modal, #loading { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+      .hidden { display: none !important; }
+      .modal-content { background: var(--white); border-radius: 15px; width: 90%; max-width: 450px; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+      .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: white; flex-shrink: 0; }
+      .modal-header h2 { margin: 0; font-size: 1.1rem; color: var(--dark); }
+      .close-modal { font-size: 28px; color: #ccc; cursor: pointer; line-height: 1; padding: 5px; }
+      .modal-body { padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+      
+      .form-group { margin-bottom: 15px; }
+      label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; color: var(--dark); }
+      input, select, textarea { width: 100%; padding: 10px; border: 1px solid #b2ebf2; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: #fafafa; font-family: inherit; }
+      .tags-input-container { display: flex; gap: 8px; flex-wrap: wrap; }
+      .tag-checkbox { display: none; }
+      .tag-label { padding: 5px 10px; border: 1px solid #b2ebf2; border-radius: 15px; font-size: 0.8rem; cursor: pointer; transition: 0.2s; }
+      .tag-checkbox:checked + .tag-label { background: var(--primary); color: white; border-color: var(--primary); }
+      
+      #detail-photos-container { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+      .detail-photo { width: 100%; border-radius: 8px; }
+      .detail-memo { white-space: pre-wrap; margin-top: 10px; line-height: 1.5; }
+      
+      .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+      .btn-cancel { background: #eceff1; color: #546e7a; padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+      .btn-save, .btn-edit { background: var(--primary); color: white; padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
 
-        .hidden-app {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .visible-app {
-            opacity: 1;
-            pointer-events: auto;
-            transition: opacity 0.5s;
-        }
-
-        /* Header */
-        header {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.95);
-            z-index: 10;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding-top: env(safe-area-inset-top);
-            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
-        }
-
-        h1 {
-            margin: 0;
-            font-size: 1.1rem;
-            color: var(--dark);
-        }
-
-        .view-switcher {
-            position: absolute;
-            right: 10px;
-            top: env(safe-area-inset-top);
-            height: 50px;
-            display: flex;
-            align-items: center;
-        }
-
-        .view-switcher button {
-            background: transparent;
-            border: none;
-            color: #b0bec5;
-            padding: 10px;
-            cursor: pointer;
-        }
-
-        .view-switcher button.active {
-            color: var(--primary);
-        }
-
-        /* Controls */
-        .controls-container {
-            position: absolute;
-            top: calc(50px + env(safe-area-inset-top));
-            left: 0;
-            width: 100%;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(4px);
-            z-index: 9;
-            display: flex;
-            align-items: center;
-            padding: 0 15px;
-            box-sizing: border-box;
-            justify-content: space-between;
-        }
-
-        #stats-bar {
-            flex: 1;
-            margin-right: 15px;
-            max-width: 200px;
-        }
-
-        .stats-content {
-            display: flex;
-            gap: 8px;
-            font-size: 0.8rem;
-            color: var(--dark);
-            font-weight: bold;
-            margin-bottom: 3px;
-        }
-
-        .progress-bg {
-            width: 100%;
-            height: 6px;
-            background: rgba(0, 188, 212, 0.15);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        #progress-fill {
-            height: 100%;
-            background: var(--primary);
-            transition: width 0.5s ease-out;
-        }
-
-        .map-controls {
-            display: flex;
-            flex-shrink: 0;
-        }
-
-        .map-switcher-btn {
-            background: white;
-            border: 1px solid var(--primary);
-            color: var(--primary);
-            padding: 5px 15px;
-            font-size: 0.85rem;
-            margin-left: 8px;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .map-switcher-btn.active {
-            background: var(--primary);
-            color: white;
-        }
-
-        /* Views */
-        .view-content {
-            display: none;
-            width: 100%;
-            height: 100vh;
-            box-sizing: border-box;
-        }
-
-        .view-content.active {
-            display: block;
-        }
-
-        #view-map {
-            padding-top: 0;
-        }
-
-        #map-container {
-            width: 100%;
-            height: 100vh;
-            z-index: 1;
-        }
-
-        #view-list {
-            padding-top: calc(100px + env(safe-area-inset-top));
-            background: var(--bg);
-            overflow-y: auto;
-            padding-bottom: 80px;
-        }
-
-        .filter-bar {
-            padding: 10px 20px;
-            text-align: right;
-            margin-top: 10px;
-        }
-
-        #tag-filter {
-            padding: 5px;
-            border-radius: 5px;
-            border: 1px solid #b2ebf2;
-            font-size: 14px;
-        }
-
-        #timeline-container {
-            padding: 0 15px;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .timeline-card {
-            background: var(--white);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            display: flex;
-            gap: 15px;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .card-thumb {
-            width: 80px;
-            height: 80px;
-            border-radius: 8px;
-            object-fit: cover;
-            background: #eee;
-            flex-shrink: 0;
-        }
-
-        .card-content {
-            flex-grow: 1;
-            overflow: hidden;
-        }
-
-        .card-title {
-            font-size: 1rem;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .card-date {
-            font-size: 0.8rem;
-            color: #888;
-            margin-bottom: 5px;
-        }
-
-        .card-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-        }
-
-        .tag-chip {
-            font-size: 0.7rem;
-            background: #e0f2f1;
-            color: #00695c;
-            padding: 2px 8px;
-            border-radius: 10px;
-        }
-
-        /* FAB */
-        #fab-add {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: white;
-            border: none;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 20;
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-
-        /* Modal */
-        #modal-overlay,
-        #detail-modal,
-        #loading {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 100;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            backdrop-filter: blur(2px);
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .modal-content {
-            background: var(--white);
-            border-radius: 15px;
-            width: 90%;
-            max-width: 450px;
-            max-height: 80vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .modal-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: white;
-            flex-shrink: 0;
-        }
-
-        .modal-header h2 {
-            margin: 0;
-            font-size: 1.1rem;
-            color: var(--dark);
-        }
-
-        .close-modal {
-            font-size: 28px;
-            color: #ccc;
-            cursor: pointer;
-            line-height: 1;
-            padding: 5px;
-        }
-
-        .modal-body {
-            padding: 20px;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            font-size: 0.9rem;
-            color: var(--dark);
-        }
-
-        input,
-        select,
-        textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #b2ebf2;
-            border-radius: 8px;
-            font-size: 16px;
-            box-sizing: border-box;
-            background: #fafafa;
-            font-family: inherit;
-        }
-
-        .tags-input-container {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .tag-checkbox {
-            display: none;
-        }
-
-        .tag-label {
-            padding: 5px 10px;
-            border: 1px solid #b2ebf2;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .tag-checkbox:checked+.tag-label {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        #detail-photos-container {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .detail-photo {
-            width: 100%;
-            border-radius: 8px;
-        }
-
-        .detail-memo {
-            white-space: pre-wrap;
-            margin-top: 10px;
-            line-height: 1.5;
-        }
-
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .btn-cancel {
-            background: #eceff1;
-            color: #546e7a;
-            padding: 10px 20px;
-            border-radius: 8px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .btn-save,
-        .btn-edit {
-            background: var(--primary);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #fff;
-            border-top: 4px solid var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 10px;
-        }
-
-        #loading {
-            flex-direction: column;
-            color: white;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        @keyframes slideUp {
-            from {
-                transform: translateY(20px);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .highcharts-data-label text {
-            font-size: 9px !important;
-            font-weight: normal !important;
-            text-shadow: none !important;
-            color: #546e7a !important;
-            fill: #546e7a !important;
-        }
+      .spinner { width: 40px; height: 40px; border: 4px solid #fff; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
+      #loading { flex-direction: column; color: white; }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      
+      .highcharts-data-label text { font-size: 9px !important; font-weight: normal !important; text-shadow: none !important; color: #546e7a !important; fill: #546e7a !important; }
     </style>
-</head>
-
-<body>
+  </head>
+  <body>
     <!-- 画面構造 -->
     <div id="login-screen">
-        <div class="login-box">
-            <h2>SayaFumi Map</h2>
-            <p>合言葉を入力してください</p>
-            <input type="password" id="login-pass" placeholder="Password">
-            <button onclick="tryLogin()">入室する</button>
-            <p id="login-error" style="color: red; display: none; margin-top:10px; font-size:0.9rem;"></p>
-        </div>
+      <div class="login-box">
+        <h2>SayaFumi Map</h2>
+        <p>合言葉を入力してください</p>
+        <input type="password" id="login-pass" placeholder="Password">
+        <button onclick="tryLogin()">入室する</button>
+        <p id="login-error" style="color: red; display: none; margin-top:10px; font-size:0.9rem;"></p>
+      </div>
     </div>
 
     <div id="app-container" class="hidden-app">
-        <header>
-            <h1>SayaFumi Map</h1>
-            <div class="view-switcher">
-                <button id="tab-map" class="active" onclick="switchView('map')"><span
-                        class="material-icons">map</span></button>
-                <button id="tab-list" onclick="switchView('list')"><span class="material-icons">list</span></button>
-            </div>
-        </header>
+      <header>
+        <h1>SayaFumi Map</h1>
+        <div class="view-switcher">
+          <button id="tab-map" class="active" onclick="switchView('map')"><span class="material-icons">map</span></button>
+          <button id="tab-list" onclick="switchView('list')"><span class="material-icons">list</span></button>
+        </div>
+      </header>
 
-        <div id="view-map" class="view-content active">
-            <div class="controls-container">
-                <div id="stats-bar">
-                    <div class="stats-content"><span id="stats-label">Japan</span><span
-                            id="stats-count">0/47</span><span id="stats-percent">0%</span></div>
-                    <div class="progress-bg">
-                        <div id="progress-fill" style="width: 0%"></div>
-                    </div>
-                </div>
-                <div class="map-controls">
-                    <button id="btn-japan" class="map-switcher-btn active" onclick="switchMap('japan')">日本</button>
-                    <button id="btn-world" class="map-switcher-btn" onclick="switchMap('world')">世界</button>
-                </div>
+      <div id="view-map" class="view-content active">
+        <div class="controls-container">
+          <div id="stats-bar">
+            <div class="stats-content">
+              <span id="stats-label">Japan</span>
+              <span id="stats-count">0/47</span>
+              <span id="stats-percent">0%</span>
             </div>
-            <div id="map-container"></div>
-            <button id="fab-add" onclick="openModal()"><span class="material-icons">add_location_alt</span></button>
+            <div class="progress-bg"><div id="progress-fill" style="width: 0%"></div></div>
+          </div>
+          <div class="map-controls">
+            <button id="btn-japan" class="map-switcher-btn active" onclick="switchMap('japan')">日本</button>
+            <button id="btn-world" class="map-switcher-btn" onclick="switchMap('world')">世界</button>
+          </div>
         </div>
+        <div id="map-container"></div>
+        <button id="fab-add" onclick="openModal()"><span class="material-icons">add_location_alt</span></button>
+      </div>
 
-        <div id="view-list" class="view-content">
-            <div class="filter-bar"><select id="tag-filter" onchange="renderList()">
-                    <option value="">全ての思い出</option>
-                </select></div>
-            <div id="timeline-container"></div>
-        </div>
+      <div id="view-list" class="view-content">
+        <div class="filter-bar"><select id="tag-filter" onchange="renderList()"><option value="">全ての思い出</option></select></div>
+        <div id="timeline-container"></div>
+      </div>
 
-        <!-- モーダル -->
-        <div id="modal-overlay" class="hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 id="form-title">思い出を記録</h2><span class="close-modal" onclick="closeModal()">×</span>
-                </div>
-                <div class="modal-body">
-                    <form id="record-form">
-                        <input type="hidden" id="edit-id">
-                        <input type="hidden" id="edit-original-photo-ids">
-                        <div class="form-group"><label>場所</label><select id="region-select" required></select></div>
-                        <div class="form-group"><label>日程</label>
-                            <div style="display:flex;gap:5px;"><input type="date" id="start-date-input"
-                                    required><span>〜</span><input type="date" id="end-date-input" required></div>
-                        </div>
-                        <div class="form-group"><label>タグ</label>
-                            <div class="tags-input-container" id="tags-checkboxes"></div>
-                        </div>
-                        <div class="form-group"><label>写真</label><input type="file" id="photo-input" accept="image/*"
-                                multiple>
-                            <p id="photo-help-msg" style="font-size:0.8rem;color:#0097a7;"></p>
-                            <div id="photo-preview-area" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;">
-                            </div>
-                        </div>
-                        <div class="form-group"><label>メモ</label><textarea id="memo-input" rows="3"></textarea></div>
-                        <div class="modal-actions"><button type="button" class="btn-cancel"
-                                onclick="closeModal()">キャンセル</button><button type="submit" class="btn-save">保存</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+      <!-- モーダル -->
+      <div id="modal-overlay" class="hidden">
+        <div class="modal-content">
+          <div class="modal-header"><h2 id="form-title">思い出を記録</h2><span class="close-modal" onclick="closeModal()">×</span></div>
+          <div class="modal-body">
+            <form id="record-form">
+              <input type="hidden" id="edit-id">
+              <input type="hidden" id="edit-original-photo-ids">
+              <div class="form-group"><label>場所</label><select id="region-select" required></select></div>
+              <div class="form-group"><label>日程</label><div style="display:flex;gap:5px;"><input type="date" id="start-date-input" required><span>〜</span><input type="date" id="end-date-input" required></div></div>
+              <div class="form-group"><label>タグ</label><div class="tags-input-container" id="tags-checkboxes"></div></div>
+              <div class="form-group"><label>写真（複数可）</label><input type="file" id="photo-input" accept="image/*" multiple><p id="photo-help-msg" style="font-size:0.8rem;color:#0097a7;"></p><div id="photo-preview-area" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;"></div></div>
+              <div class="form-group"><label>メモ</label><textarea id="memo-input" rows="3"></textarea></div>
+              <div class="modal-actions"><button type="button" class="btn-cancel" onclick="closeModal()">キャンセル</button><button type="submit" class="btn-save">保存</button></div>
+            </form>
+          </div>
         </div>
+      </div>
 
-        <div id="detail-modal" class="hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 id="detail-title"></h2><span class="close-modal" onclick="closeDetailModal()">×</span>
-                </div>
-                <div class="modal-body">
-                    <div id="detail-content"></div>
-                    <div id="detail-photos-container"></div>
-                    <div class="modal-actions"><button type="button" class="btn-edit"
-                            onclick="editCurrentRecord()">編集する</button><button type="button" class="btn-cancel"
-                            onclick="closeDetailModal()">閉じる</button></div>
-                </div>
-            </div>
+      <div id="detail-modal" class="hidden">
+        <div class="modal-content">
+          <div class="modal-header"><h2 id="detail-title"></h2><span class="close-modal" onclick="closeDetailModal()">×</span></div>
+          <div class="modal-body">
+            <div id="detail-content"></div>
+            <div id="detail-photos-container"></div>
+            <div class="modal-actions"><button type="button" class="btn-edit" onclick="editCurrentRecord()">編集する</button><button type="button" class="btn-cancel" onclick="closeDetailModal()">閉じる</button></div>
+          </div>
         </div>
-        <div id="loading" class="hidden">
-            <div class="spinner"></div>
-            <p>処理中...</p>
-        </div>
+      </div>
+      <div id="loading" class="hidden"><div class="spinner"></div><p>処理中...</p></div>
     </div>
 
     <!-- Logic -->
     <script>
-        // ★ API通信
-        async function callGAS(action, params = {}) {
-            if (!GAS_API_URL) { alert("GAS URL設定エラー"); return; }
-            params.password = appPassword;
-            // plain/textで送信し、CORS問題回避
-            try {
-                const response = await fetch(GAS_API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: action, params: params })
-                });
-                const json = await response.json();
-                if (json.error) throw new Error(json.error);
-                return json.result;
-            } catch (e) {
-                throw e;
-            }
+      // ■ API通信関数
+      async function callGAS(action, params = {}) {
+        if (!GAS_API_URL) { alert("GAS URL設定エラー"); return; }
+        params.password = appPassword;
+        try {
+          const response = await fetch(GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: action, params: params })
+          });
+          const json = await response.json();
+          if (json.error) throw new Error(json.error);
+          return json.result;
+        } catch (e) {
+          throw e;
+        }
+      }
+
+      // --- Variables ---
+      let currentMap = 'japan', currentView = 'map', chart, savedRecords = [], currentDetailRecord = null, appPassword = '', imageObserver = null;
+      const STORAGE_KEY = 'travel_app_pass';
+      const COLOR_PALETTE = ['#4DD0E1', '#26C6DA', '#00BCD4', '#00ACC1', '#0097A7'];
+      const WISH_COLOR = '#FFB74D';
+      
+      const JP_PREF_MAP = {'jp-hk':'北海道','jp-ao':'青森県','jp-iw':'岩手県','jp-mg':'宮城県','jp-mi':'宮城県','jp-ak':'秋田県','jp-yg':'山形県','jp-yam':'山形県','jp-fs':'福島県','jp-ib':'茨城県','jp-tc':'栃木県','jp-gu':'群馬県','jp-gm':'群馬県','jp-st':'埼玉県','jp-ch':'千葉県','jp-tk':'東京都','jp-kn':'神奈川県','jp-ni':'新潟県','jp-ty':'富山県','jp-is':'石川県','jp-fi':'福井県','jp-yn':'山梨県','jp-nn':'長野県','jp-gf':'岐阜県','jp-gi':'岐阜県','jp-sz':'静岡県','jp-ai':'愛知県','jp-me':'三重県','jp-mi':'三重県','jp-sh':'滋賀県','jp-ky':'京都府','jp-os':'大阪府','jp-hg':'兵庫県','jp-hy':'兵庫県','jp-nr':'奈良県','jp-wk':'和歌山県','jp-tt':'鳥取県','jp-sm':'島根県','jp-oy':'岡山県','jp-hs':'広島県','jp-yc':'山口県','jp-ts':'徳島県','jp-kg':'香川県','jp-ka':'香川県','jp-eh':'愛媛県','jp-kc':'高知県','jp-fo':'福岡県','jp-sg':'佐賀県','jp-ns':'長崎県','jp-na':'長崎県','jp-ku':'熊本県','jp-km':'熊本県','jp-ot':'大分県','jp-oi':'大分県','jp-mz':'宮崎県','jp-ks':'鹿児島県','jp-kj':'鹿児島県','jp-on':'沖縄県','jp-ok':'沖縄県','jp-3480':'群馬県','jp-3456':'愛知県','jp-3460':'兵庫県'};
+      const WORLD_COUNTRY_MAP = {'jp':'日本','us':'アメリカ','cn':'中国','kr':'韓国','gb':'イギリス','fr':'フランス','de':'ドイツ','it':'イタリア','es':'スペイン','au':'オーストラリア','ca':'カナダ','br':'ブラジル','tw':'台湾','th':'タイ','vn':'ベトナム','id':'インドネシア','ph':'フィリピン','sg':'シンガポール','my':'マレーシア'};
+      const NAME_TO_JP = {'Hokkaido':'北海道','Aomori':'青森県','Iwate':'岩手県','Miyagi':'宮城県','Akita':'秋田県','Yamagata':'山形県','Fukushima':'福島県','Ibaraki':'茨城県','Tochigi':'栃木県','Gunma':'群馬県','Saitama':'埼玉県','Chiba':'千葉県','Tokyo':'東京都','Kanagawa':'神奈川県','Niigata':'新潟県','Toyama':'富山県','Ishikawa':'石川県','Fukui':'福井県','Yamanashi':'山梨県','Nagano':'長野県','Gifu':'岐阜県','Shizuoka':'静岡県','Aichi':'愛知県','Mie':'三重県','Shiga':'滋賀県','Kyoto':'京都府','Osaka':'大阪府','Hyogo':'兵庫県','Nara':'奈良県','Wakayama':'和歌山県','Tottori':'鳥取県','Shimane':'島根県','Okayama':'岡山県','Hiroshima':'広島県','Yamaguchi':'山口県','Tokushima':'徳島県','Kagawa':'香川県','Ehime':'愛媛県','Kochi':'高知県','Fukuoka':'福岡県','Saga':'佐賀県','Nagasaki':'長崎県','Kumamoto':'熊本県','Oita':'大分県','Miyazaki':'宮崎県','Kagoshima':'鹿児島県','Okinawa':'沖縄県'};
+      const TAG_LIST = ['温泉', 'グルメ', '絶景', '宿', '観光', '記念日', 'ドライブ', 'グランピング', 'アミューズメント', '誕生日', 'クリスマス', '行きたい'];
+
+      document.addEventListener('DOMContentLoaded', () => {
+        setupTags();
+        initImageObserver();
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const auth = urlParams.get('auth');
+        if (auth) {
+            localStorage.setItem(STORAGE_KEY, auth);
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
 
-        // --- Variables ---
-        let currentMap = 'japan', currentView = 'map', chart, savedRecords = [], currentDetailRecord = null, appPassword = '', imageObserver = null;
-        const STORAGE_KEY = 'travel_app_pass';
-        const COLOR_PALETTE = ['#4DD0E1', '#26C6DA', '#00BCD4', '#00ACC1', '#0097A7'];
-        const WISH_COLOR = '#FFB74D';
+        const savedPass = localStorage.getItem(STORAGE_KEY);
+        if (savedPass) {
+          document.getElementById('login-pass').value = savedPass;
+          const btn = document.querySelector('.login-box button');
+          btn.innerText = '自動ログイン中...';
+          btn.disabled = true;
+          tryLogin();
+        }
+      });
 
-        const JP_PREF_MAP = { 'jp-hk': '北海道', 'jp-ao': '青森県', 'jp-iw': '岩手県', 'jp-mg': '宮城県', 'jp-mi': '宮城県', 'jp-ak': '秋田県', 'jp-yg': '山形県', 'jp-yam': '山形県', 'jp-fs': '福島県', 'jp-ib': '茨城県', 'jp-tc': '栃木県', 'jp-gu': '群馬県', 'jp-gm': '群馬県', 'jp-st': '埼玉県', 'jp-ch': '千葉県', 'jp-tk': '東京都', 'jp-kn': '神奈川県', 'jp-ni': '新潟県', 'jp-ty': '富山県', 'jp-is': '石川県', 'jp-fi': '福井県', 'jp-yn': '山梨県', 'jp-nn': '長野県', 'jp-gf': '岐阜県', 'jp-gi': '岐阜県', 'jp-sz': '静岡県', 'jp-ai': '愛知県', 'jp-me': '三重県', 'jp-mi': '三重県', 'jp-sh': '滋賀県', 'jp-ky': '京都府', 'jp-os': '大阪府', 'jp-hg': '兵庫県', 'jp-hy': '兵庫県', 'jp-nr': '奈良県', 'jp-wk': '和歌山県', 'jp-tt': '鳥取県', 'jp-sm': '島根県', 'jp-oy': '岡山県', 'jp-hs': '広島県', 'jp-yc': '山口県', 'jp-ts': '徳島県', 'jp-kg': '香川県', 'jp-ka': '香川県', 'jp-eh': '愛媛県', 'jp-kc': '高知県', 'jp-fo': '福岡県', 'jp-sg': '佐賀県', 'jp-ns': '長崎県', 'jp-na': '長崎県', 'jp-ku': '熊本県', 'jp-km': '熊本県', 'jp-ot': '大分県', 'jp-oi': '大分県', 'jp-mz': '宮崎県', 'jp-ks': '鹿児島県', 'jp-kj': '鹿児島県', 'jp-on': '沖縄県', 'jp-ok': '沖縄県', 'jp-3480': '群馬県', 'jp-3456': '愛知県', 'jp-3460': '兵庫県' };
-        const WORLD_COUNTRY_MAP = { 'jp': '日本', 'us': 'アメリカ', 'cn': '中国', 'kr': '韓国', 'gb': 'イギリス', 'fr': 'フランス', 'de': 'ドイツ', 'it': 'イタリア', 'es': 'スペイン', 'au': 'オーストラリア', 'ca': 'カナダ', 'br': 'ブラジル', 'tw': '台湾', 'th': 'タイ', 'vn': 'ベトナム', 'id': 'インドネシア', 'ph': 'フィリピン', 'sg': 'シンガポール', 'my': 'マレーシア' };
-        const NAME_TO_JP = { 'Hokkaido': '北海道', 'Aomori': '青森県', 'Iwate': '岩手県', 'Miyagi': '宮城県', 'Akita': '秋田県', 'Yamagata': '山形県', 'Fukushima': '福島県', 'Ibaraki': '茨城県', 'Tochigi': '栃木県', 'Gunma': '群馬県', 'Saitama': '埼玉県', 'Chiba': '千葉県', 'Tokyo': '東京都', 'Kanagawa': '神奈川県', 'Niigata': '新潟県', 'Toyama': '富山県', 'Ishikawa': '石川県', 'Fukui': '福井県', 'Yamanashi': '山梨県', 'Nagano': '長野県', 'Gifu': '岐阜県', 'Shizuoka': '静岡県', 'Aichi': '愛知県', 'Mie': '三重県', 'Shiga': '滋賀県', 'Kyoto': '京都府', 'Osaka': '大阪府', 'Hyogo': '兵庫県', 'Nara': '奈良県', 'Wakayama': '和歌山県', 'Tottori': '鳥取県', 'Shimane': '島根県', 'Okayama': '岡山県', 'Hiroshima': '広島県', 'Yamaguchi': '山口県', 'Tokushima': '徳島県', 'Kagawa': '香川県', 'Ehime': '愛媛県', 'Kochi': '高知県', 'Fukuoka': '福岡県', 'Saga': '佐賀県', 'Nagasaki': '長崎県', 'Kumamoto': '熊本県', 'Oita': '大分県', 'Miyazaki': '宮崎県', 'Kagoshima': '鹿児島県', 'Okinawa': '沖縄県' };
-        const TAG_LIST = ['温泉', 'グルメ', '絶景', '宿', '観光', '記念日', 'ドライブ', 'グランピング', 'アミューズメント', '誕生日', 'クリスマス', '行きたい'];
+      function initImageObserver() {
+        if ('IntersectionObserver' in window) {
+          imageObserver = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                const img = entry.target;
+                const photoId = img.dataset.photoId;
+                if (photoId) {
+                  callGAS('fetchPhoto', { photoId: photoId }).then(base64 => {
+                    img.src = base64 || 'https://via.placeholder.com/80?text=No+Image';
+                    img.style.opacity = 0;
+                    setTimeout(() => { img.style.transition='opacity 0.5s'; img.style.opacity=1; },50);
+                  });
+                  obs.unobserve(img);
+                }
+              }
+            });
+          });
+        }
+      }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            setupTags();
-            initImageObserver();
+      function setupTags() {
+        const container = document.getElementById('tags-checkboxes');
+        const filter = document.getElementById('tag-filter');
+        container.innerHTML = ''; filter.innerHTML = '<option value="">全ての思い出</option>';
+        TAG_LIST.forEach(tag => {
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = `<input type="checkbox" class="tag-checkbox" id="tag-${tag}" value="${tag}"><label class="tag-label" for="tag-${tag}">${tag}</label>`;
+            container.appendChild(wrapper);
+            const op = document.createElement('option');
+            op.value = tag; op.innerText = tag;
+            filter.appendChild(op);
+        });
+      }
 
-            // URLパラメータからの自動ログイン
-            const urlParams = new URLSearchParams(window.location.search);
-            const auth = urlParams.get('auth');
-            if (auth) {
-                localStorage.setItem(STORAGE_KEY, auth);
-                window.history.replaceState({}, document.title, window.location.pathname);
+      function tryLogin() {
+        const inputPass = document.getElementById('login-pass').value;
+        const errorMsg = document.getElementById('login-error');
+        const btn = document.querySelector('.login-box button');
+        
+        if(!inputPass) return;
+        appPassword = inputPass;
+
+        callGAS('getTravelData')
+          .then(data => {
+            localStorage.setItem(STORAGE_KEY, inputPass);
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-container').classList.remove('hidden-app');
+            document.getElementById('app-container').classList.add('visible-app');
+            savedRecords = data || [];
+            
+            setTimeout(() => {
+              drawMap();
+              updateStats();
+              updateRegionSelect();
+              renderList();
+              setupForm();
+            }, 100);
+          })
+          .catch(err => {
+            console.error(err);
+            errorMsg.style.display = 'block';
+            errorMsg.innerText = 'パスワードが違います / 接続エラー';
+            localStorage.removeItem(STORAGE_KEY);
+            btn.innerText = '入室する';
+            btn.disabled = false;
+          });
+      }
+
+      function getMapKey() {
+        const keys = Object.keys(Highcharts.maps);
+        if(currentMap === 'world') return keys.find(k => k.indexOf('world')!==-1) || 'custom/world';
+        return keys.find(k => k.indexOf('jp')!==-1) || 'countries/jp/jp-all';
+      }
+      function resolveRegionName(key, name) {
+        if (!key) return '';
+        if (currentMap === 'japan') {
+            if (JP_PREF_MAP[key]) return JP_PREF_MAP[key];
+            if (name && NAME_TO_JP[name]) return NAME_TO_JP[name];
+        } else {
+            if (WORLD_COUNTRY_MAP[key]) return WORLD_COUNTRY_MAP[key];
+            if (key.startsWith('jp-')) return '日本';
+        }
+        return name || key || '';
+      }
+      function resolveRegionNameStatic(key) {
+        if (!key) return '';
+        if (key.startsWith('jp-')) return JP_PREF_MAP[key] || key;
+        return WORLD_COUNTRY_MAP[key] || key;
+      }
+      function findValidKey(recordKey, features) {
+        if (!recordKey) return null;
+        if (features.some(f => f.properties['hc-key'] === recordKey)) return recordKey;
+        if (currentMap === 'japan') {
+            let target = JP_PREF_MAP[recordKey] || NAME_TO_JP[recordKey];
+            if (!target && Object.values(JP_PREF_MAP).includes(recordKey)) target = recordKey;
+            if (target) {
+                const match = features.find(f => {
+                    const k = f.properties['hc-key'];
+                    const n = f.properties['name'];
+                    return resolveRegionName(k, n) === target;
+                });
+                if (match) return match.properties['hc-key'];
             }
+        }
+        return recordKey;
+      }
+      function getColorForKey(key, record) {
+        if (record && record.tags && record.tags.includes('行きたい')) return WISH_COLOR;
+        let hash = 0; for (let i=0; i<key.length; i++) hash = key.charCodeAt(i) + ((hash<<5)-hash);
+        return COLOR_PALETTE[Math.abs(hash)%COLOR_PALETTE.length];
+      }
 
-            const savedPass = localStorage.getItem(STORAGE_KEY);
-            if (savedPass) {
-                document.getElementById('login-pass').value = savedPass;
-                const btn = document.querySelector('.login-box button');
-                btn.innerText = '自動ログイン中...';
-                btn.disabled = true;
-                tryLogin();
+      function switchView(view) {
+        currentView = view;
+        document.querySelectorAll('.view-content').forEach(el => el.classList.remove('active'));
+        document.getElementById(`view-${view}`).classList.add('active');
+        document.getElementById('tab-map').classList.toggle('active', view === 'map');
+        document.getElementById('tab-list').classList.toggle('active', view === 'list');
+        if(view==='map') { drawMap(); updateStats(); } else { renderList(); }
+      }
+      function switchMap(type) {
+        currentMap = type;
+        document.getElementById('btn-japan').classList.toggle('active', type === 'japan');
+        document.getElementById('btn-world').classList.toggle('active', type === 'world');
+        drawMap();
+        updateRegionSelect();
+        setTimeout(updateStats, 100);
+      }
+      function toggleLoading(show) {
+        const el = document.getElementById('loading');
+        if (show) el.classList.remove('hidden'); else el.classList.add('hidden');
+      }
+
+      function updateStats() {
+        if (!savedRecords) return;
+        const visitedKeys = new Set();
+        savedRecords.forEach(r => {
+            const isWish = r.tags && r.tags.includes('行きたい');
+            if(r.regionKey && !isWish) visitedKeys.add(r.regionKey);
+        });
+        let total = 0, count = 0, label = '';
+        if (currentMap === 'japan') {
+            label = 'Japan'; total = 47;
+            count = [...visitedKeys].filter(k => k.startsWith('jp-')).length;
+        } else {
+            label = 'World'; total = 196;
+            const countryKeys = new Set();
+            [...visitedKeys].forEach(k => { if(k.startsWith('jp-')) countryKeys.add('jp'); else countryKeys.add(k); });
+            count = countryKeys.size;
+        }
+        const percent = total > 0 ? Math.round((count/total)*100) : 0;
+        document.getElementById('stats-label').innerText = label;
+        document.getElementById('stats-count').innerText = total > 0 ? `${count}/${total}` : `${count} Countries`;
+        document.getElementById('stats-percent').innerText = total > 0 ? `${percent}%` : '';
+        const bar = document.getElementById('progress-fill');
+        if(bar) bar.style.width = total > 0 ? `${percent}%` : '100%';
+      }
+
+      function drawMap() {
+        const container = document.getElementById('map-container');
+        if(!container) return;
+        if(chart) { chart.destroy(); chart=undefined; }
+        
+        const mapKey = getMapKey();
+        if(!Highcharts.maps[mapKey]) return;
+        const mapGeoJSON = Highcharts.maps[mapKey];
+        const features = mapGeoJSON.features;
+        const recordMap = {};
+
+        savedRecords.forEach(r => {
+            if(!r.regionKey) return;
+            let key = r.regionKey;
+            if(currentMap==='world' && key.startsWith('jp-')) key='jp';
+            
+            let valid = false;
+            if(features.some(f => f.properties['hc-key']===key)) valid = true;
+            else if(currentMap==='japan') {
+                const v = findValidKey(key, features);
+                if(v) { key=v; valid=true; }
+            }
+            if(valid && (!recordMap[key] || r.startDate > recordMap[key].startDate)) {
+                recordMap[key] = r;
             }
         });
 
-        function initImageObserver() {
-            if ('IntersectionObserver' in window) {
-                imageObserver = new IntersectionObserver((entries, obs) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            const img = entry.target;
-                            const photoId = img.dataset.photoId;
-                            if (photoId) {
-                                callGAS('fetchPhoto', { photoId: photoId }).then(base64 => {
-                                    img.src = base64 || 'https://via.placeholder.com/80?text=No+Image';
-                                    img.style.opacity = 0;
-                                    setTimeout(() => { img.style.transition = 'opacity 0.5s'; img.style.opacity = 1; }, 50);
-                                });
-                                obs.unobserve(img);
-                            }
-                        }
-                    });
-                });
-            }
-        }
-
-        function setupTags() {
-            const container = document.getElementById('tags-checkboxes');
-            const filter = document.getElementById('tag-filter');
-            container.innerHTML = ''; filter.innerHTML = '<option value="">全ての思い出</option>';
-            TAG_LIST.forEach(tag => {
-                const wrapper = document.createElement('div');
-                wrapper.innerHTML = `<input type="checkbox" class="tag-checkbox" id="tag-${tag}" value="${tag}"><label class="tag-label" for="tag-${tag}">${tag}</label>`;
-                container.appendChild(wrapper);
-                const op = document.createElement('option');
-                op.value = tag; op.innerText = tag;
-                filter.appendChild(op);
-            });
-        }
-
-        function tryLogin() {
-            const inputPass = document.getElementById('login-pass').value;
-            const errorMsg = document.getElementById('login-error');
-            const btn = document.querySelector('.login-box button');
-
-            if (!inputPass) return;
-            appPassword = inputPass;
-
-            callGAS('getTravelData')
-                .then(data => {
-                    localStorage.setItem(STORAGE_KEY, inputPass);
-                    document.getElementById('login-screen').style.display = 'none';
-                    document.getElementById('app-container').classList.remove('hidden-app');
-                    document.getElementById('app-container').classList.add('visible-app');
-                    savedRecords = data || [];
-
-                    setTimeout(() => {
-                        drawMap();
-                        updateStats();
-                        updateRegionSelect();
-                        renderList();
-                        setupForm();
-                    }, 100);
-                })
-                .catch(err => {
-                    console.error(err);
-                    errorMsg.style.display = 'block';
-                    errorMsg.innerText = 'パスワードが違います / 接続エラー';
-                    localStorage.removeItem(STORAGE_KEY);
-                    btn.innerText = '入室する';
-                    btn.disabled = false;
-                });
-        }
-
-        // 共通ヘルパー
-        function getMapKey() {
-            const keys = Object.keys(Highcharts.maps);
-            if (currentMap === 'world') return keys.find(k => k.indexOf('world') !== -1) || 'custom/world';
-            return keys.find(k => k.indexOf('jp') !== -1) || 'countries/jp/jp-all';
-        }
-        function resolveRegionName(key, name) {
-            if (!key) return '';
-            if (currentMap === 'japan') {
-                if (JP_PREF_MAP[key]) return JP_PREF_MAP[key];
-                if (name && NAME_TO_JP[name]) return NAME_TO_JP[name];
+        const seriesData = [];
+        features.forEach(f => {
+            const k = f.properties['hc-key'];
+            if(!k) return;
+            if(recordMap[k]) {
+                seriesData.push({ 'hc-key':k, value:1, color:getColorForKey(k, recordMap[k]), recordData:recordMap[k], states:{hover:{color:'#80deea',borderColor:'#00838f',borderWidth:1}} });
             } else {
-                if (WORLD_COUNTRY_MAP[key]) return WORLD_COUNTRY_MAP[key];
-                if (key.startsWith('jp-')) return '日本';
+                seriesData.push({ 'hc-key':k, value:0, color:'#ffffff', recordData:null, states:{hover:{color:'#f5f5f5',borderColor:'#cfd8dc',borderWidth:0.5}} });
             }
-            return name || key || '';
-        }
-        function resolveRegionNameStatic(key) {
-            if (!key) return '';
-            if (key.startsWith('jp-')) return JP_PREF_MAP[key] || key;
-            return WORLD_COUNTRY_MAP[key] || key;
-        }
-        function findValidKey(recordKey, features) {
-            if (!recordKey) return null;
-            if (features.some(f => f.properties['hc-key'] === recordKey)) return recordKey;
-            if (currentMap === 'japan') {
-                let target = JP_PREF_MAP[recordKey] || NAME_TO_JP[recordKey];
-                if (!target && Object.values(JP_PREF_MAP).includes(recordKey)) target = recordKey;
-                if (target) {
-                    const match = features.find(f => {
-                        const k = f.properties['hc-key'];
-                        const n = f.properties['name'];
-                        return resolveRegionName(k, n) === target;
-                    });
-                    if (match) return match.properties['hc-key'];
-                }
-            }
-            return recordKey;
-        }
-        function getColorForKey(key, record) {
-            if (record && record.tags && record.tags.includes('行きたい')) return WISH_COLOR;
-            if (!key) return COLOR_PALETTE[0];
-            let hash = 0; for (let i = 0; i < key.length; i++) hash = key.charCodeAt(i) + ((hash << 5) - hash);
-            return COLOR_PALETTE[Math.abs(hash) % COLOR_PALETTE.length];
-        }
+        });
 
-        function switchView(view) {
-            currentView = view;
-            document.querySelectorAll('.view-content').forEach(el => el.classList.remove('active'));
-            document.getElementById(`view-${view}`).classList.add('active');
-            document.getElementById('tab-map').classList.toggle('active', view === 'map');
-            document.getElementById('tab-list').classList.toggle('active', view === 'list');
-            if (view === 'map') { drawMap(); updateStats(); } else { renderList(); }
-        }
-        function switchMap(type) {
-            currentMap = type;
-            document.getElementById('btn-japan').classList.toggle('active', type === 'japan');
-            document.getElementById('btn-world').classList.toggle('active', type === 'world');
-            drawMap();
-            updateRegionSelect();
-            setTimeout(updateStats, 100);
-        }
-        function toggleLoading(show) {
-            const el = document.getElementById('loading');
-            if (show) el.classList.remove('hidden'); else el.classList.add('hidden');
-        }
-
-        // Stats
-        function updateStats() {
-            if (!savedRecords) return;
-            const visitedKeys = new Set();
-            savedRecords.forEach(r => {
-                const isWish = r.tags && r.tags.includes('行きたい');
-                if (r.regionKey && !isWish) visitedKeys.add(r.regionKey);
-            });
-            let total = 0, count = 0, label = '';
-            if (currentMap === 'japan') {
-                label = 'Japan'; total = 47;
-                count = [...visitedKeys].filter(k => k.startsWith('jp-')).length;
-            } else {
-                label = 'World'; total = 196;
-                const countryKeys = new Set();
-                [...visitedKeys].forEach(k => { if (k.startsWith('jp-')) countryKeys.add('jp'); else countryKeys.add(k); });
-                count = countryKeys.size;
-            }
-            const percent = total > 0 ? Math.round((count / total) * 100) : 0;
-            document.getElementById('stats-label').innerText = label;
-            document.getElementById('stats-count').innerText = total > 0 ? `${count}/${total}` : `${count} Countries`;
-            document.getElementById('stats-percent').innerText = total > 0 ? `${percent}%` : '';
-            const bar = document.getElementById('progress-fill');
-            if (bar) bar.style.width = total > 0 ? `${percent}%` : '100%';
-        }
-
-        // Draw Map
-        function drawMap() {
-            const container = document.getElementById('map-container');
-            if (!container) return;
-            if (chart) { chart.destroy(); chart = undefined; }
-
-            const mapKey = getMapKey();
-            if (!Highcharts.maps[mapKey]) return;
-            const mapGeoJSON = Highcharts.maps[mapKey];
-            const features = mapGeoJSON.features;
-            const recordMap = {};
-
-            savedRecords.forEach(r => {
-                if (!r.regionKey) return;
-                let key = r.regionKey;
-                if (currentMap === 'world' && key.startsWith('jp-')) key = 'jp';
-
-                let valid = false;
-                if (features.some(f => f.properties['hc-key'] === key)) valid = true;
-                else if (currentMap === 'japan') {
-                    const v = findValidKey(key, features);
-                    if (v) { key = v; valid = true; }
-                }
-                if (valid && (!recordMap[key] || r.startDate > recordMap[key].startDate)) {
-                    recordMap[key] = r;
-                }
-            });
-
-            const seriesData = [];
-            features.forEach(f => {
-                const k = f.properties['hc-key'];
-                if (!k) return;
-                if (recordMap[k]) {
-                    seriesData.push({ 'hc-key': k, value: 1, color: getColorForKey(k, recordMap[k]), recordData: recordMap[k], states: { hover: { color: '#80deea', borderColor: '#00838f', borderWidth: 1 } } });
-                } else {
-                    seriesData.push({ 'hc-key': k, value: 0, color: '#ffffff', recordData: null, states: { hover: { color: '#f5f5f5', borderColor: '#cfd8dc', borderWidth: 0.5 } } });
-                }
-            });
-
-            chart = Highcharts.mapChart('map-container', {
-                chart: { map: mapKey, backgroundColor: '#e0f7fa' },
-                accessibility: { enabled: false },
-                exporting: { enabled: false },
-                title: { text: null },
-                mapNavigation: { enabled: true, buttonOptions: { verticalAlign: 'bottom' }, enableDoubleClickZoomTo: true },
-                tooltip: { enabled: false },
-                legend: { enabled: false },
-                plotOptions: {
-                    map: {
-                        allAreas: false, joinBy: ['hc-key', 'hc-key'], borderColor: '#cfd8dc', borderWidth: 0.5,
-                        dataLabels: { enabled: true, formatter: function () { return resolveRegionName(this.point['hc-key'], this.point.name); }, style: { fontSize: '9px', textOutline: 'none', color: '#546e7a', fontWeight: 'normal' } },
-                        point: {
-                            events: {
-                                click: function () {
-                                    if (currentMap === 'world' && this['hc-key'] === 'jp') { switchMap('japan'); return; }
-                                    if (this.recordData) showDetail(this.recordData);
-                                    else { const k = this['hc-key']; if (k) openModal(k); }
-                                }
+        chart = Highcharts.mapChart('map-container', {
+            chart: { map: mapKey, backgroundColor: '#e0f7fa' },
+            accessibility: { enabled: false },
+            exporting: { enabled: false }, 
+            title: { text: null },
+            mapNavigation: { enabled: true, buttonOptions: { verticalAlign: 'bottom' }, enableDoubleClickZoomTo: true },
+            tooltip: { enabled: false },
+            legend: { enabled: false },
+            plotOptions: {
+                map: {
+                    allAreas: false, joinBy: ['hc-key', 'hc-key'], borderColor: '#cfd8dc', borderWidth: 0.5,
+                    dataLabels: { enabled: true, formatter: function(){ return resolveRegionName(this.point['hc-key'], this.point.name); }, style: {fontSize:'9px', textOutline:'none', color:'#546e7a', fontWeight:'normal'} },
+                    point: {
+                        events: {
+                            click: function() {
+                                if(currentMap==='world' && this['hc-key']==='jp') { switchMap('japan'); return; }
+                                if(this.recordData) showDetail(this.recordData);
+                                else { const k = this['hc-key']; if(k) openModal(k); }
                             }
                         }
                     }
-                },
-                series: [{ data: seriesData, mapData: mapGeoJSON, name: 'Visited' }]
-            });
-        }
+                }
+            },
+            series: [{ data: seriesData, mapData: mapGeoJSON, name: 'Visited' }]
+        });
+      }
 
-        function updateRegionSelect() {
-            generateSelectOptions(currentMap === 'japan');
-        }
+      function updateRegionSelect() {
+        generateSelectOptions(currentMap==='japan');
+      }
+      
+      function generateSelectOptions(isJapan) {
+        const sel = document.getElementById('region-select');
+        sel.innerHTML = '<option value="">選択してください</option>';
+        const mapKey = isJapan ? 
+            (Object.keys(Highcharts.maps).find(k=>k.includes('jp'))||'countries/jp/jp-all') : 
+            (Object.keys(Highcharts.maps).find(k=>k.includes('world'))||'custom/world');
+        if(!Highcharts.maps[mapKey]) return;
+        
+        const tempResolve = (k,n) => {
+            if(isJapan) { if(JP_PREF_MAP[k]) return JP_PREF_MAP[k]; if(n && NAME_TO_JP[n]) return NAME_TO_JP[n]; }
+            else { if(WORLD_COUNTRY_MAP[k]) return WORLD_COUNTRY_MAP[k]; if(k.startsWith('jp-')) return '日本'; }
+            return n || k;
+        };
+        
+        let items = Highcharts.maps[mapKey].features
+            .filter(f => f.properties && f.properties['hc-key'])
+            .map(f => ({ key: f.properties['hc-key'], name: tempResolve(f.properties['hc-key'], f.properties['name']) }))
+            .sort((a,b) => (a.name||'').localeCompare(b.name||'', 'ja'));
+            
+        items.forEach(i => {
+            const op = document.createElement('option');
+            op.value = i.key; op.innerText = i.name;
+            sel.appendChild(op);
+        });
+      }
 
-        function generateSelectOptions(isJapan) {
-            const sel = document.getElementById('region-select');
-            sel.innerHTML = '<option value="">選択してください</option>';
-            const mapKey = isJapan ?
-                (Object.keys(Highcharts.maps).find(k => k.includes('jp')) || 'countries/jp/jp-all') :
-                (Object.keys(Highcharts.maps).find(k => k.includes('world')) || 'custom/world');
-            if (!Highcharts.maps[mapKey]) return;
-
-            const tempResolve = (k, n) => {
-                if (isJapan) { if (JP_PREF_MAP[k]) return JP_PREF_MAP[k]; if (n && NAME_TO_JP[n]) return NAME_TO_JP[n]; }
-                else { if (WORLD_COUNTRY_MAP[k]) return WORLD_COUNTRY_MAP[k]; if (k.startsWith('jp-')) return '日本'; }
-                return n || k;
+      // --- 画像リサイズ用ヘルパー ---
+      function resizeImage(file, maxWidth) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+              if (width > maxWidth) {
+                height = Math.round(height * (maxWidth / width));
+                width = maxWidth;
+              }
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+              resolve({ name: file.name, data: canvas.toDataURL('image/jpeg', 0.8) });
             };
+            img.onerror = reject;
+            img.src = e.target.result;
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
 
-            let items = Highcharts.maps[mapKey].features
-                .filter(f => f.properties && f.properties['hc-key'])
-                .map(f => ({ key: f.properties['hc-key'], name: tempResolve(f.properties['hc-key'], f.properties['name']) }))
-                .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ja'));
+      function openModal(preSelectedKey=null, editData=null) {
+        document.getElementById('modal-overlay').classList.remove('hidden');
+        const form = document.getElementById('record-form');
+        form.reset();
+        document.getElementById('edit-id').value = '';
+        document.getElementById('edit-original-photo-ids').value = '';
+        document.querySelectorAll('.tag-checkbox').forEach(c => c.checked = false);
+        document.getElementById('photo-preview-area').innerHTML = '';
+        document.getElementById('photo-help-msg').innerText = '';
 
-            items.forEach(i => {
-                const op = document.createElement('option');
-                op.value = i.key; op.innerText = i.name;
-                sel.appendChild(op);
-            });
-        }
+        const safeDate = (v) => (v && v.length>=10) ? v.substring(0,10) : '';
+        let targetKey = editData ? editData.regionKey : preSelectedKey;
+        let isJapan = (targetKey && targetKey.startsWith('jp-')) || (!targetKey && currentMap==='japan');
+        if(targetKey && !targetKey.startsWith('jp-')) isJapan = false;
 
-        // モーダル・フォーム
-        function openModal(preSelectedKey = null, editData = null) {
-            document.getElementById('modal-overlay').classList.remove('hidden');
-            const form = document.getElementById('record-form');
-            form.reset();
-            document.getElementById('edit-id').value = '';
-            document.getElementById('edit-original-photo-ids').value = '';
-            document.querySelectorAll('.tag-checkbox').forEach(c => c.checked = false);
-            document.getElementById('photo-preview-area').innerHTML = '';
-            document.getElementById('photo-help-msg').innerText = '';
+        generateSelectOptions(isJapan);
+        const sel = document.getElementById('region-select');
 
-            const safeDate = (v) => (v && v.length >= 10) ? v.substring(0, 10) : '';
-            let targetKey = editData ? editData.regionKey : preSelectedKey;
-            let isJapan = (targetKey && targetKey.startsWith('jp-')) || (!targetKey && currentMap === 'japan');
-            if (targetKey && !targetKey.startsWith('jp-')) isJapan = false;
+        if(editData) {
+            document.getElementById('form-title').innerText = '記録を編集';
+            document.getElementById('edit-id').value = editData.id;
+            const photoIds = editData.photoIds || [];
+            document.getElementById('edit-original-photo-ids').value = photoIds.join(',');
+            
+            if(![...sel.options].some(o=>o.value===targetKey) && isJapan) {
+                const mk = Object.keys(Highcharts.maps).find(k=>k.includes('jp'));
+                if(mk) { const v = findValidKey(targetKey, Highcharts.maps[mk].features); if(v) targetKey=v; }
+            }
+            if([...sel.options].some(o=>o.value===targetKey)) sel.value = targetKey;
 
-            generateSelectOptions(isJapan);
-            const sel = document.getElementById('region-select');
-
-            if (editData) {
-                document.getElementById('form-title').innerText = '記録を編集';
-                document.getElementById('edit-id').value = editData.id;
-                const photoIds = editData.photoIds || [];
-                document.getElementById('edit-original-photo-ids').value = photoIds.join(',');
-
-                // 値セット (名寄せ込み)
-                if (![...sel.options].some(o => o.value === targetKey) && isJapan) {
-                    const mk = Object.keys(Highcharts.maps).find(k => k.includes('jp'));
-                    if (mk) { const v = findValidKey(targetKey, Highcharts.maps[mk].features); if (v) targetKey = v; }
+            document.getElementById('start-date-input').value = safeDate(editData.startDate);
+            document.getElementById('end-date-input').value = safeDate(editData.endDate);
+            document.getElementById('memo-input').value = editData.memo || '';
+            if(editData.tags) editData.tags.forEach(t => { const c=document.getElementById('tag-'+t); if(c) c.checked=true; });
+            if(photoIds.length > 0) document.getElementById('photo-help-msg').innerText = `※保存済みの写真${photoIds.length}枚は維持されます。`;
+        } else {
+            document.getElementById('form-title').innerText = '思い出を記録';
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('start-date-input').value = today;
+            document.getElementById('end-date-input').value = today;
+            if(targetKey) {
+                if(isJapan && ![...sel.options].some(o=>o.value===targetKey)) {
+                    const mk = Object.keys(Highcharts.maps).find(k=>k.includes('jp'));
+                    if(mk) { const v = findValidKey(targetKey, Highcharts.maps[mk].features); if(v) targetKey=v; }
                 }
-                if ([...sel.options].some(o => o.value === targetKey)) sel.value = targetKey;
+                if([...sel.options].some(o=>o.value===targetKey)) sel.value = targetKey;
+            }
+        }
+      }
 
-                document.getElementById('start-date-input').value = safeDate(editData.startDate);
-                document.getElementById('end-date-input').value = safeDate(editData.endDate);
-                document.getElementById('memo-input').value = editData.memo || '';
-                if (editData.tags) editData.tags.forEach(t => { const c = document.getElementById('tag-' + t); if (c) c.checked = true; });
-                if (photoIds.length > 0) document.getElementById('photo-help-msg').innerText = `※保存済みの写真${photoIds.length}枚は維持されます。`;
-            } else {
-                document.getElementById('form-title').innerText = '思い出を記録';
-                const today = new Date().toISOString().split('T')[0];
-                document.getElementById('start-date-input').value = today;
-                document.getElementById('end-date-input').value = today;
-                if (targetKey) {
-                    if (isJapan && ![...sel.options].some(o => o.value === targetKey)) {
-                        const mk = Object.keys(Highcharts.maps).find(k => k.includes('jp'));
-                        if (mk) { const v = findValidKey(targetKey, Highcharts.maps[mk].features); if (v) targetKey = v; }
-                    }
-                    if ([...sel.options].some(o => o.value === targetKey)) sel.value = targetKey;
+      function closeModal() { document.getElementById('modal-overlay').classList.add('hidden'); }
+      function closeDetailModal() { document.getElementById('detail-modal').classList.add('hidden'); }
+      function editCurrentRecord() { if(!currentDetailRecord) return; const rec=currentDetailRecord; closeDetailModal(); openModal(null, rec); }
+
+      function showDetail(data) {
+        currentDetailRecord = data;
+        const modal = document.getElementById('detail-modal');
+        document.getElementById('detail-title').innerText = resolveRegionNameStatic(data.regionKey);
+        const d1 = data.startDate ? data.startDate.substring(0,10).replace(/-/g,'/') : '';
+        const d2 = data.endDate ? data.endDate.substring(0,10).replace(/-/g,'/') : '';
+        let html = `<div class="detail-date">${(d1!==d2 && d2) ? d1+' 〜 '+d2 : d1}</div>`;
+        if(data.tags && data.tags.length>0) {
+            html += '<div class="detail-tags">';
+            data.tags.forEach(t => html += `<span class="tag-chip">${t}</span>`);
+            html += '</div>';
+        }
+        html += `<div class="detail-memo">${data.memo||'(メモなし)'}</div>`;
+        document.getElementById('detail-content').innerHTML = html;
+        
+        const pc = document.getElementById('detail-photos-container');
+        pc.innerHTML = '<p style="font-size:0.8rem;color:#aaa;">Loading photos...</p>';
+        if(data.thumbnailBase64) pc.innerHTML = `<img src="${data.thumbnailBase64}" class="detail-photo">`;
+        
+        if(data.photoIds && data.photoIds.length>0) {
+            callGAS('getPhotosForDetail', { photoIdsString: data.photoIds.join(',') })
+                .then(base64List => {
+                    let imgs = '';
+                    base64List.forEach(b => { if(b) imgs += `<img src="${b}" class="detail-photo">`; });
+                    pc.innerHTML = imgs;
+                });
+        } else if(!data.thumbnailBase64) {
+            pc.innerHTML = '';
+        }
+        modal.classList.remove('hidden');
+      }
+
+      function setupForm() {
+        const form = document.getElementById('record-form');
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        newForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('photo-input');
+            const files = fileInput.files;
+            const selectedTags = [];
+            document.querySelectorAll('.tag-checkbox:checked').forEach(c => selectedTags.push(c.value));
+            
+            const photoPromises = [];
+            if(files.length > 0) {
+                for(let i=0; i<files.length; i++) {
+                    photoPromises.push(resizeImage(files[i], 1200));
                 }
             }
-        }
 
-        function closeModal() { document.getElementById('modal-overlay').classList.add('hidden'); }
-        function closeDetailModal() { document.getElementById('detail-modal').classList.add('hidden'); }
-        function editCurrentRecord() { if (!currentDetailRecord) return; const rec = currentDetailRecord; closeDetailModal(); openModal(null, rec); }
-
-        function showDetail(data) {
-            currentDetailRecord = data;
-            const modal = document.getElementById('detail-modal');
-            document.getElementById('detail-title').innerText = resolveRegionNameStatic(data.regionKey);
-            const d1 = data.startDate ? data.startDate.substring(0, 10).replace(/-/g, '/') : '';
-            const d2 = data.endDate ? data.endDate.substring(0, 10).replace(/-/g, '/') : '';
-            let html = `<div class="detail-date">${(d1 !== d2 && d2) ? d1 + ' 〜 ' + d2 : d1}</div>`;
-            if (data.tags && data.tags.length > 0) {
-                html += '<div class="detail-tags">';
-                data.tags.forEach(t => html += `<span class="tag-chip">${t}</span>`);
-                html += '</div>';
-            }
-            html += `<div class="detail-memo">${data.memo || '(メモなし)'}</div>`;
-            document.getElementById('detail-content').innerHTML = html;
-
-            const pc = document.getElementById('detail-photos-container');
-            pc.innerHTML = '<p style="font-size:0.8rem;color:#aaa;">Loading photos...</p>';
-            if (data.thumbnailBase64) pc.innerHTML = `<img src="${data.thumbnailBase64}" class="detail-photo">`;
-
-            if (data.photoIds && data.photoIds.length > 0) {
-                callGAS('getPhotosForDetail', { photoIdsString: data.photoIds.join(',') })
-                    .then(base64List => {
-                        let imgs = '';
-                        base64List.forEach(b => { if (b) imgs += `<img src="${b}" class="detail-photo">`; });
-                        pc.innerHTML = imgs;
-                    });
-            } else if (!data.thumbnailBase64) {
-                pc.innerHTML = '';
-            }
-            modal.classList.remove('hidden');
-        }
-
-        function resizeImage(file, maxWidth) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > maxWidth) {
-                            height = Math.round(height * (maxWidth / width));
-                            width = maxWidth;
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-
-                        // JPEG形式、画質0.8(80%)で圧縮してBase64化
-                        resolve({
-                            name: file.name,
-                            data: canvas.toDataURL('image/jpeg', 0.8)
-                        });
-                    };
-                    img.onerror = reject;
-                    img.src = e.target.result;
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function setupForm() {
-            const form = document.getElementById('record-form');
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-
-            newForm.addEventListener('submit', function (e) {
-                e.preventDefault();
-                const fileInput = document.getElementById('photo-input');
-                const files = fileInput.files;
-                const selectedTags = [];
-                document.querySelectorAll('.tag-checkbox:checked').forEach(c => selectedTags.push(c.value));
-
-                const formData = {
+            toggleLoading(true);
+            Promise.all(photoPromises).then(newPhotos => {
+                const params = {
                     id: document.getElementById('edit-id').value,
                     originalPhotoIds: document.getElementById('edit-original-photo-ids').value,
                     regionKey: document.getElementById('region-select').value,
@@ -1090,85 +639,80 @@
                     endDate: document.getElementById('end-date-input').value,
                     memo: document.getElementById('memo-input').value,
                     tags: selectedTags,
-                    newPhotos: [],
-                    password: appPassword
+                    newPhotos: newPhotos
                 };
-
-                if (!formData.regionKey) { alert('場所を選択してください'); return; }
-
-                toggleLoading(true);
-
-                // ★修正: 送信前にブラウザ側でリサイズ処理を実行
-                const photoPromises = [];
-                if (files.length > 0) {
-                    for (let i = 0; i < files.length; i++) {
-                        // 幅1200pxにリサイズして圧縮
-                        photoPromises.push(resizeImage(files[i], 1200));
-                    }
-                }
-
-                Promise.all(photoPromises).then(resizedPhotos => {
-                    formData.newPhotos = resizedPhotos;
-                    submitToGAS(formData);
-                }).catch(err => {
-                    toggleLoading(false);
-                    alert('写真の処理に失敗しました: ' + err);
-                });
-            });
-        }
-
-        function renderList() {
-            const container = document.getElementById('timeline-container');
-            if (!container) return;
-            container.innerHTML = '';
-            const filterTag = document.getElementById('tag-filter').value;
-            const sorted = [...savedRecords].sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
-
-            sorted.forEach(r => {
-                if (filterTag && (!r.tags || !r.tags.includes(filterTag))) return;
-                const card = document.createElement('div');
-                card.className = 'timeline-card';
-                card.onclick = () => showDetail(r);
-                const img = document.createElement('img');
-                img.className = 'card-thumb';
-                // プレースホルダー
-                img.src = 'https://via.placeholder.com/80?text=Loading';
-                if (r.photoIds && r.photoIds.length > 0) {
-                    img.dataset.photoId = r.photoIds[0];
-                    if (imageObserver) imageObserver.observe(img);
-                } else {
-                    img.src = 'https://via.placeholder.com/80?text=No+Image';
-                }
-
-                const content = document.createElement('div');
-                content.className = 'card-content';
-                const dateDiv = document.createElement('div');
-                dateDiv.className = 'card-date';
-                const d1 = r.startDate ? r.startDate.substring(0, 10).replace(/-/g, '/') : '';
-                const d2 = r.endDate ? r.endDate.substring(0, 10).replace(/-/g, '/') : '';
-                dateDiv.innerText = (d1 !== d2 && d2) ? `${d1} 〜 ${d2}` : d1;
-
-                const title = document.createElement('div');
-                title.className = 'card-title';
-                title.innerText = resolveRegionNameStatic(r.regionKey);
-
-                const tagsDiv = document.createElement('div');
-                tagsDiv.className = 'card-tags';
-                if (r.tags) {
-                    r.tags.forEach(t => {
-                        const sp = document.createElement('span');
-                        sp.className = 'tag-chip';
-                        sp.innerText = t;
-                        if (t === '行きたい') { sp.style.backgroundColor = '#FFF3E0'; sp.style.color = '#EF6C00'; }
-                        tagsDiv.appendChild(sp);
+                if(!params.regionKey) { alert('場所を選択してください'); toggleLoading(false); return; }
+                
+                // ★修正: submitToGASではなく、callGASを使って直接送信するように変更（参照エラー回避）
+                callGAS('saveRecord', params)
+                    .then(res => {
+                        closeModal();
+                        fetchDataAndDraw();
+                        alert(res.mode==='update' ? '修正しました！' : '記録しました！');
+                    })
+                    .catch(err => {
+                        toggleLoading(false);
+                        alert('保存失敗: ' + err.message);
                     });
-                }
-                content.append(dateDiv, title, tagsDiv);
-                card.append(img, content);
-                container.appendChild(card);
+            }).catch(err => {
+                toggleLoading(false);
+                alert('写真処理エラー: ' + err);
             });
-        }
-    </script>
-</body>
+        });
+      }
 
+      // 古い submitToGAS は削除し、setupForm内で完結させました
+
+      function renderList() {
+        const container = document.getElementById('timeline-container');
+        if(!container) return;
+        container.innerHTML = '';
+        const filterTag = document.getElementById('tag-filter').value;
+        const sorted = [...savedRecords].sort((a,b) => (b.startDate||'').localeCompare(a.startDate||''));
+        
+        sorted.forEach(r => {
+            if(filterTag && (!r.tags || !r.tags.includes(filterTag))) return;
+            const card = document.createElement('div');
+            card.className = 'timeline-card';
+            card.onclick = () => showDetail(r);
+            const img = document.createElement('img');
+            img.className = 'card-thumb';
+            img.src = 'https://via.placeholder.com/80?text=Loading';
+            if(r.photoIds && r.photoIds.length>0) {
+                img.dataset.photoId = r.photoIds[0];
+                if(imageObserver) imageObserver.observe(img);
+            } else {
+                img.src = 'https://via.placeholder.com/80?text=No+Image';
+            }
+            
+            const content = document.createElement('div');
+            content.className = 'card-content';
+            const dateDiv = document.createElement('div');
+            dateDiv.className = 'card-date';
+            const d1 = r.startDate ? r.startDate.substring(0,10).replace(/-/g,'/') : '';
+            const d2 = r.endDate ? r.endDate.substring(0,10).replace(/-/g,'/') : '';
+            dateDiv.innerText = (d1!==d2 && d2) ? `${d1} 〜 ${d2}` : d1;
+            
+            const title = document.createElement('div');
+            title.className = 'card-title';
+            title.innerText = resolveRegionNameStatic(r.regionKey);
+            
+            const tagsDiv = document.createElement('div');
+            tagsDiv.className = 'card-tags';
+            if(r.tags) {
+                r.tags.forEach(t => {
+                    const sp = document.createElement('span');
+                    sp.className = 'tag-chip';
+                    sp.innerText = t;
+                    if(t==='行きたい') { sp.style.backgroundColor='#FFF3E0'; sp.style.color='#EF6C00'; }
+                    tagsDiv.appendChild(sp);
+                });
+            }
+            content.append(dateDiv, title, tagsDiv);
+            card.append(img, content);
+            container.appendChild(card);
+        });
+      }
+    </script>
+  </body>
 </html>
