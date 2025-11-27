@@ -45,6 +45,26 @@
       header { position: absolute; top: 0; left: 0; width: 100%; height: 50px; background: rgba(255,255,255,0.95); z-index: 10; display: flex; justify-content: center; align-items: center; padding-top: env(safe-area-inset-top); box-shadow: 0 1px 0 rgba(0,0,0,0.05); }
       h1 { margin: 0; font-size: 1.1rem; color: var(--dark); }
       
+      /* 更新ボタン (左上) */
+      #reload-btn {
+        position: absolute;
+        left: 10px;
+        top: env(safe-area-inset-top);
+        height: 50px;
+        background: transparent;
+        border: none;
+        color: #b0bec5;
+        padding: 10px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.3s;
+      }
+      #reload-btn:active { color: var(--primary); }
+      /* 回転アニメーション */
+      .spin-anim { animation: spin 1s linear infinite; color: var(--primary) !important; }
+
       .view-switcher { position: absolute; right: 10px; top: env(safe-area-inset-top); height: 50px; display: flex; align-items: center; }
       .view-switcher button { background: transparent; border: none; color: #b0bec5; padding: 10px; cursor: pointer; }
       .view-switcher button.active { color: var(--primary); }
@@ -80,7 +100,24 @@
       .tag-chip { font-size: 0.7rem; background: #e0f2f1; color: #00695c; padding: 2px 8px; border-radius: 10px; }
 
       /* FAB */
-      #fab-add { position: absolute; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: var(--primary); color: white; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; display: flex; justify-content: center; align-items: center; z-index: 20; padding-bottom: env(safe-area-inset-bottom); }
+      #fab-add { 
+        position: absolute; 
+        bottom: calc(30px + env(safe-area-inset-bottom));
+        right: 30px; 
+        width: 60px; 
+        height: 60px; 
+        border-radius: 50%; 
+        background: var(--primary); 
+        color: white; 
+        border: none; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+        cursor: pointer; 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        z-index: 20; 
+      }
+      #fab-add .material-icons { font-size: 32px; line-height: 1; }
 
       /* Modal */
       #modal-overlay, #detail-modal, #loading { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
@@ -129,7 +166,13 @@
 
     <div id="app-container" class="hidden-app">
       <header>
+        <!-- ★更新ボタン -->
+        <button id="reload-btn" onclick="reloadData()">
+          <span class="material-icons">refresh</span>
+        </button>
+
         <h1>SayaFumi Map</h1>
+        
         <div class="view-switcher">
           <button id="tab-map" class="active" onclick="switchView('map')"><span class="material-icons">map</span></button>
           <button id="tab-list" onclick="switchView('list')"><span class="material-icons">list</span></button>
@@ -160,7 +203,7 @@
         <div id="timeline-container"></div>
       </div>
 
-      <!-- モーダル -->
+      <!-- モーダル (変更なし) -->
       <div id="modal-overlay" class="hidden">
         <div class="modal-content">
           <div class="modal-header"><h2 id="form-title">思い出を記録</h2><span class="close-modal" onclick="closeModal()">×</span></div>
@@ -311,23 +354,33 @@
             btn.disabled = false;
           });
       }
-      
-      // ★不足していた関数を追加
+
+      // ★データ更新関数（Promiseを返す）
       function fetchDataAndDraw() {
-        toggleLoading(true);
-        callGAS('getTravelData')
+        return callGAS('getTravelData')
           .then(data => {
             savedRecords = data || [];
             drawMap();
             updateStats();
             updateRegionSelect();
             renderList();
-            toggleLoading(false);
           })
           .catch(err => {
             alert('データ更新失敗: ' + err.message);
-            toggleLoading(false);
           });
+      }
+
+      // ★リロードボタンの処理
+      function reloadData() {
+        const icon = document.querySelector('#reload-btn .material-icons');
+        icon.classList.add('spin-anim');
+        // fetchDataAndDrawの完了を待って回転を止める
+        fetchDataAndDraw().finally(() => {
+            // 最低500msは回して「やってる感」を出す
+            setTimeout(() => {
+                icon.classList.remove('spin-anim');
+            }, 500);
+        });
       }
 
       // 共通ヘルパー
@@ -517,7 +570,7 @@
         });
       }
 
-      // --- 画像リサイズ用ヘルパー ---
+      // 画像リサイズ
       function resizeImage(file, maxWidth) {
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -545,6 +598,7 @@
         });
       }
 
+      // モーダル
       function openModal(preSelectedKey=null, editData=null) {
         document.getElementById('modal-overlay').classList.remove('hidden');
         const form = document.getElementById('record-form');
@@ -552,10 +606,8 @@
         document.getElementById('edit-id').value = '';
         document.getElementById('edit-original-photo-ids').value = '';
         document.querySelectorAll('.tag-checkbox').forEach(c => c.checked = false);
-        const previewArea = document.getElementById('photo-preview-area');
-        if(previewArea) previewArea.innerHTML = '';
-        const msgArea = document.getElementById('photo-help-msg');
-        if(msgArea) msgArea.innerText = '';
+        document.getElementById('photo-preview-area').innerHTML = '';
+        document.getElementById('photo-help-msg').innerText = '';
 
         const safeDate = (v) => (v && v.length>=10) ? v.substring(0,10) : '';
         let targetKey = editData ? editData.regionKey : preSelectedKey;
@@ -581,7 +633,7 @@
             document.getElementById('end-date-input').value = safeDate(editData.endDate);
             document.getElementById('memo-input').value = editData.memo || '';
             if(editData.tags) editData.tags.forEach(t => { const c=document.getElementById('tag-'+t); if(c) c.checked=true; });
-            if(photoIds.length > 0 && msgArea) msgArea.innerText = `※保存済みの写真${photoIds.length}枚は維持されます。`;
+            if(photoIds.length > 0) document.getElementById('photo-help-msg').innerText = `※保存済みの写真${photoIds.length}枚は維持されます。`;
         } else {
             document.getElementById('form-title').innerText = '思い出を記録';
             const today = new Date().toISOString().split('T')[0];
