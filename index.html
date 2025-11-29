@@ -14,8 +14,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SayaFumi Map">
     <meta name="theme-color" content="#e0f7fa">
-    <link rel="apple-touch-icon" href="./icon.jpg">
-    <link rel="icon" type="image/jpg" href="./icon.jpg">
+    <link rel="apple-touch-icon" href="./icon.png">
+    <link rel="icon" type="image/png" href="./icon.png">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.3.15/proj4.js"></script>
     <script src="https://code.highcharts.com/maps/highmaps.js"></script>
@@ -27,17 +27,12 @@
     <style>
       :root { --primary: #00bcd4; --dark: #0097a7; --accent: #80deea; --bg: #e0f7fa; --white: #fff; --text: #37474f; }
       body { margin: 0; font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
-      
-      /* Login */
       #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; justify-content: center; align-items: center; }
       .login-box { background: var(--white); padding: 30px; border-radius: 15px; text-align: center; width: 80%; max-width: 300px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
       .login-box input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #b2ebf2; border-radius: 8px; box-sizing: border-box; text-align: center; font-size: 16px; }
       .login-box button { width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-      
       .hidden-app { opacity: 0; pointer-events: none; }
       .visible-app { opacity: 1; pointer-events: auto; transition: opacity 0.5s; }
-
-      /* Header */
       header { position: absolute; top: 0; left: 0; width: 100%; height: 50px; background: rgba(255,255,255,0.95); z-index: 10; display: flex; justify-content: center; align-items: center; padding-top: env(safe-area-inset-top); box-shadow: 0 1px 0 rgba(0,0,0,0.05); }
       h1 { margin: 0; font-size: 1.1rem; color: var(--dark); }
       #reload-btn { position: absolute; left: 10px; top: env(safe-area-inset-top); height: 50px; background: transparent; border: none; color: #b0bec5; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.3s; }
@@ -46,8 +41,6 @@
       .view-switcher { position: absolute; right: 10px; top: env(safe-area-inset-top); height: 50px; display: flex; align-items: center; }
       .view-switcher button { background: transparent; border: none; color: #b0bec5; padding: 10px; cursor: pointer; }
       .view-switcher button.active { color: var(--primary); }
-      
-      /* Controls */
       .controls-container { position: absolute; top: calc(50px + env(safe-area-inset-top)); left: 0; width: 100%; height: 50px; background: rgba(255,255,255,0.85); backdrop-filter: blur(4px); z-index: 9; display: flex; align-items: center; padding: 0 15px; box-sizing: border-box; justify-content: space-between; }
       #stats-bar { flex: 1; margin-right: 15px; max-width: 200px; }
       .stats-content { display: flex; gap: 8px; font-size: 0.8rem; color: var(--dark); font-weight: bold; margin-bottom: 3px; }
@@ -56,8 +49,6 @@
       .map-controls { display: flex; flex-shrink: 0; }
       .map-switcher-btn { background: white; border: 1px solid var(--primary); color: var(--primary); padding: 5px 15px; font-size: 0.85rem; margin-left: 8px; border-radius: 20px; cursor: pointer; transition: 0.2s; }
       .map-switcher-btn.active { background: var(--primary); color: white; }
-
-      /* Views */
       .view-content { display: none; width: 100%; height: 100vh; box-sizing: border-box; }
       .view-content.active { display: block; }
       #view-map { padding-top: 0; }
@@ -66,22 +57,15 @@
       .filter-bar { padding: 10px 20px; text-align: right; margin-top: 10px; }
       #tag-filter { padding: 5px; border-radius: 5px; border: 1px solid #b2ebf2; font-size: 14px; }
       #timeline-container { padding: 0 15px; max-width: 600px; margin: 0 auto; }
-      
-      /* Card & Photo Styles */
-      /* 画像未読み込み時はグレー背景にする */
-      .card-thumb, .detail-photo { background-color: #e0e0e0; }
-      
       .timeline-card { background: var(--white); border-radius: 10px; padding: 15px; margin-bottom: 15px; display: flex; gap: 15px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-      .card-thumb { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; flex-shrink: 0; transition: opacity 0.3s; }
+      .card-thumb { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; background: #eee; flex-shrink: 0; transition: opacity 0.3s; }
       .card-content { flex-grow: 1; overflow: hidden; }
       .card-title { font-size: 1rem; font-weight: bold; margin-bottom: 5px; }
       .card-date { font-size: 0.8rem; color: #888; margin-bottom: 5px; }
       .card-tags { display: flex; flex-wrap: wrap; gap: 5px; }
       .tag-chip { font-size: 0.7rem; background: #e0f2f1; color: #00695c; padding: 2px 8px; border-radius: 10px; }
-
       #fab-add { position: absolute; bottom: calc(30px + env(safe-area-inset-bottom)); right: 30px; width: 60px; height: 60px; border-radius: 50%; background: var(--primary); color: white; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; display: flex; justify-content: center; align-items: center; z-index: 20; }
       #fab-add .material-icons { font-size: 32px; line-height: 1; }
-
       #modal-overlay, #detail-modal, #loading { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
       .hidden { display: none !important; }
       .modal-content { background: var(--white); border-radius: 15px; width: 90%; max-width: 450px; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
@@ -89,7 +73,6 @@
       .modal-header h2 { margin: 0; font-size: 1.1rem; color: var(--dark); }
       .close-modal { font-size: 28px; color: #ccc; cursor: pointer; line-height: 1; padding: 5px; }
       .modal-body { padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-      
       .form-group { margin-bottom: 15px; }
       label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; color: var(--dark); }
       input, select, textarea { width: 100%; padding: 10px; border: 1px solid #b2ebf2; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: #fafafa; font-family: inherit; }
@@ -97,11 +80,9 @@
       .tag-checkbox { display: none; }
       .tag-label { padding: 5px 10px; border: 1px solid #b2ebf2; border-radius: 15px; font-size: 0.8rem; cursor: pointer; transition: 0.2s; }
       .tag-checkbox:checked + .tag-label { background: var(--primary); color: white; border-color: var(--primary); }
-      
       #detail-photos-container { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; min-height: 50px; }
       .detail-photo { width: 100%; border-radius: 8px; min-height: 150px; transition: opacity 0.3s; }
       .detail-memo { white-space: pre-wrap; margin-top: 10px; line-height: 1.5; }
-      
       .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
       .btn-cancel { background: #eceff1; color: #546e7a; padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
       .btn-save, .btn-edit { background: var(--primary); color: white; padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
@@ -200,9 +181,7 @@
 
       let currentMap = 'japan', currentView = 'map', chart, savedRecords = [], currentDetailRecord = null, appPassword = '';
       let imageObserver = null;
-      // ★画像キャッシュ用オブジェクト
       const imageCache = {}; 
-      // ★空画像のBase64 (透明)
       const EMPTY_IMG = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
       const STORAGE_KEY = 'travel_app_pass';
@@ -231,23 +210,17 @@
         }
       });
 
-      // ★修正: 画像読み込み管理関数（キャッシュ対応）
       async function loadPhoto(imgElement, photoId) {
         if (!photoId) return;
-        
-        // キャッシュにあれば即適用
         if (imageCache[photoId]) {
             imgElement.src = imageCache[photoId];
             imgElement.style.opacity = 1;
             return;
         }
-
-        // なければ取得
         try {
             const base64 = await callGAS('fetchPhoto', { photoId: photoId });
             if (base64) {
-                imageCache[photoId] = base64; // キャッシュ保存
-                // 画面上の同じIDを持つ全ての画像要素を更新 (リストと詳細の両方など)
+                imageCache[photoId] = base64; 
                 const targets = document.querySelectorAll(`img[data-photo-id="${photoId}"]`);
                 targets.forEach(target => {
                     target.src = base64;
@@ -255,7 +228,7 @@
                     setTimeout(() => { target.style.opacity = 1; }, 50);
                 });
             } else {
-                imgElement.src = EMPTY_IMG; // 取得失敗時は透明に
+                imgElement.src = EMPTY_IMG; 
             }
         } catch(e) {
             console.error("Image load error:", e);
@@ -271,7 +244,6 @@
                 const img = entry.target;
                 const photoId = img.dataset.photoId;
                 if (photoId && !img.src.startsWith('data:image/png') && !img.src.startsWith('data:image/jpeg')) {
-                   // まだ読み込まれていない場合のみロード
                    loadPhoto(img, photoId);
                 }
                 obs.unobserve(img);
@@ -309,6 +281,15 @@
             document.getElementById('app-container').classList.remove('hidden-app');
             document.getElementById('app-container').classList.add('visible-app');
             savedRecords = data || [];
+            
+            // ログイン直後にサムネ画像の先読みを開始
+            savedRecords.forEach(r => {
+                if (r.photoIds && r.photoIds.length > 0 && !imageCache[r.photoIds[0]]) {
+                    // キューに入れる処理は今回は省略し、Observerに任せるが
+                    // リスト表示時に即座に反応するようにする
+                }
+            });
+
             setTimeout(() => {
               drawMap();
               updateStats();
@@ -327,31 +308,38 @@
           });
       }
       
-      function fetchDataAndDraw() {
-        toggleLoading(true);
-        callGAS('getTravelData')
+      // ★修正: showLoading引数を追加し、デフォルトはtrue、falseなら裏で更新
+      function fetchDataAndDraw(showLoading = true) {
+        if(showLoading) toggleLoading(true);
+        
+        return callGAS('getTravelData')
           .then(data => {
             savedRecords = data || [];
             drawMap();
             updateStats();
             updateRegionSelect();
             renderList();
-            toggleLoading(false);
+            if(showLoading) toggleLoading(false);
           })
           .catch(err => {
-            alert('データ更新失敗: ' + err.message);
-            toggleLoading(false);
+            if(showLoading) {
+                alert('データ更新失敗: ' + err.message);
+                toggleLoading(false);
+            } else {
+                console.error('Background update failed:', err);
+            }
           });
       }
 
       function reloadData() {
         const icon = document.querySelector('#reload-btn .material-icons');
         icon.classList.add('spin-anim');
-        fetchDataAndDraw().finally(() => {
+        fetchDataAndDraw(false).finally(() => {
             setTimeout(() => { icon.classList.remove('spin-anim'); }, 500);
         });
       }
 
+      // 共通ヘルパー (変更なし)
       function getMapKey() {
         const keys = Object.keys(Highcharts.maps);
         if(currentMap === 'world') return keys.find(k => k.indexOf('world')!==-1) || 'custom/world';
@@ -459,6 +447,7 @@
             if(!r.regionKey) return;
             let key = r.regionKey;
             if(currentMap==='world' && key.startsWith('jp-')) key='jp';
+            
             let valid = false;
             if(features.some(f => f.properties['hc-key']===key)) valid = true;
             else if(currentMap==='japan') {
@@ -637,25 +626,21 @@
         const pc = document.getElementById('detail-photos-container');
         pc.innerHTML = '<p style="font-size:0.8rem;color:#aaa;">Loading photos...</p>';
         
-        // 詳細写真もキャッシュチェックしてからロード
         if(data.photoIds && data.photoIds.length>0) {
-            // まずHTMLを生成（プレースホルダー）
-            let imgsHtml = '';
-            data.photoIds.forEach(id => {
-               // キャッシュがあれば即表示、なければプレースホルダー
-               const src = imageCache[id] ? imageCache[id] : EMPTY_IMG;
-               const style = imageCache[id] ? '' : 'background-color:#e0e0e0;';
-               imgsHtml += `<img src="${src}" data-photo-id="${id}" class="detail-photo" style="${style}">`;
-            });
-            pc.innerHTML = imgsHtml;
-            
-            // 未ロード画像をロード開始
-            const targets = pc.querySelectorAll('img[data-photo-id]');
-            targets.forEach(img => {
-               if(img.src === EMPTY_IMG) {
-                   loadPhoto(img, img.dataset.photoId);
-               }
-            });
+             // 詳細写真もIDベースでロード
+             pc.innerHTML = '';
+             data.photoIds.forEach(id => {
+                // プレースホルダーを作成
+                const img = document.createElement('img');
+                img.className = 'detail-photo';
+                img.src = 'https://via.placeholder.com/80?text=Loading';
+                img.style.backgroundColor = '#e0e0e0';
+                img.dataset.photoId = id;
+                pc.appendChild(img);
+                
+                // 即座にロード開始
+                loadPhoto(img, id);
+             });
         } else {
             pc.innerHTML = '';
         }
@@ -694,12 +679,13 @@
                 };
                 if(!params.regionKey) { alert('場所を選択してください'); toggleLoading(false); return; }
                 
+                // ★修正: 保存成功時は即座にローディングを消し、裏で更新 (false)
                 callGAS('saveRecord', params)
                     .then(res => {
                         closeModal();
-                        toggleLoading(false); // 先にローディング消す
+                        toggleLoading(false);
                         alert(res.mode==='update' ? '修正しました！' : '記録しました！');
-                        fetchDataAndDraw(); // 裏で更新
+                        fetchDataAndDraw(false); 
                     })
                     .catch(err => {
                         toggleLoading(false);
@@ -726,19 +712,19 @@
             card.onclick = () => showDetail(r);
             const img = document.createElement('img');
             img.className = 'card-thumb';
+            img.src = 'https://via.placeholder.com/80?text=Loading';
             
-            // キャッシュ確認
+            // ★修正: キャッシュがあれば即時適用、なければObserverへ
             if(r.photoIds && r.photoIds.length>0) {
-                img.dataset.photoId = r.photoIds[0];
-                if(imageCache[r.photoIds[0]]) {
-                    img.src = imageCache[r.photoIds[0]];
+                const pid = r.photoIds[0];
+                img.dataset.photoId = pid;
+                if(imageCache[pid]) {
+                    img.src = imageCache[pid];
                 } else {
-                    img.src = EMPTY_IMG; // グレー背景になる
                     if(imageObserver) imageObserver.observe(img);
                 }
             } else {
-                img.src = EMPTY_IMG; // 画像なし用のアイコンとかでもOK
-                img.style.backgroundColor = '#e0f7fa';
+                img.src = 'https://via.placeholder.com/80?text=No+Image';
             }
             
             const content = document.createElement('div');
