@@ -6,21 +6,17 @@
     
     <!-- ■ 設定: ここにGASのウェブアプリURLを貼り付けてください -->
     <script>
-      const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwkJW9E6fDCPNXIOL3t7UDdtaP29kzDNRs8h-6CMoOwCmlt7zMGb0ec5Z636Jesk-LxJg/exec"; 
+      const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzVXXbpthu5Va-TWTXVWzPvSG40ptfyANY8n7bpfxkKWZOfLV3fzVuBaMcG6WKMK5_LgQ/exec"; 
     </script>
 
-    <!-- PWA・スマホ設定 -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SayaFumi Map">
     <meta name="theme-color" content="#e0f7fa">
-    
-    <!-- アプリアイコン -->
-    <link rel="apple-touch-icon" href="./icon.jpg">
-    <link rel="icon" type="image/png" href="./icon.jpg">
+    <link rel="apple-touch-icon" href="./icon.png">
+    <link rel="icon" type="image/png" href="./icon.png">
 
-    <!-- ライブラリ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.3.15/proj4.js"></script>
     <script src="https://code.highcharts.com/maps/highmaps.js"></script>
     <script src="https://code.highcharts.com/mapdata/countries/jp/jp-all.js"></script>
@@ -31,66 +27,36 @@
     <style>
       :root { --primary: #00bcd4; --dark: #0097a7; --accent: #80deea; --bg: #e0f7fa; --white: #fff; --text: #37474f; }
       body { margin: 0; font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
-      
-      /* Login */
       #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; justify-content: center; align-items: center; }
       .login-box { background: var(--white); padding: 30px; border-radius: 15px; text-align: center; width: 80%; max-width: 300px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
       .login-box input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #b2ebf2; border-radius: 8px; box-sizing: border-box; text-align: center; font-size: 16px; }
       .login-box button { width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-      
       .hidden-app { opacity: 0; pointer-events: none; }
       .visible-app { opacity: 1; pointer-events: auto; transition: opacity 0.5s; }
-
-      /* Header */
       header { position: absolute; top: 0; left: 0; width: 100%; height: 50px; background: rgba(255,255,255,0.95); z-index: 10; display: flex; justify-content: center; align-items: center; padding-top: env(safe-area-inset-top); box-shadow: 0 1px 0 rgba(0,0,0,0.05); }
       h1 { margin: 0; font-size: 1.1rem; color: var(--dark); }
-      
-      /* 更新ボタン (左上) */
-      #reload-btn {
-        position: absolute;
-        left: 10px;
-        top: env(safe-area-inset-top);
-        height: 50px;
-        background: transparent;
-        border: none;
-        color: #b0bec5;
-        padding: 10px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: color 0.3s;
-      }
+      #reload-btn { position: absolute; left: 10px; top: env(safe-area-inset-top); height: 50px; background: transparent; border: none; color: #b0bec5; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.3s; }
       #reload-btn:active { color: var(--primary); }
-      /* 回転アニメーション */
       .spin-anim { animation: spin 1s linear infinite; color: var(--primary) !important; }
-
       .view-switcher { position: absolute; right: 10px; top: env(safe-area-inset-top); height: 50px; display: flex; align-items: center; }
       .view-switcher button { background: transparent; border: none; color: #b0bec5; padding: 10px; cursor: pointer; }
       .view-switcher button.active { color: var(--primary); }
-
-      /* Controls */
       .controls-container { position: absolute; top: calc(50px + env(safe-area-inset-top)); left: 0; width: 100%; height: 50px; background: rgba(255,255,255,0.85); backdrop-filter: blur(4px); z-index: 9; display: flex; align-items: center; padding: 0 15px; box-sizing: border-box; justify-content: space-between; }
       #stats-bar { flex: 1; margin-right: 15px; max-width: 200px; }
       .stats-content { display: flex; gap: 8px; font-size: 0.8rem; color: var(--dark); font-weight: bold; margin-bottom: 3px; }
       .progress-bg { width: 100%; height: 6px; background: rgba(0,188,212,0.15); border-radius: 3px; overflow: hidden; }
       #progress-fill { height: 100%; background: var(--primary); transition: width 0.5s ease-out; }
-      
       .map-controls { display: flex; flex-shrink: 0; }
       .map-switcher-btn { background: white; border: 1px solid var(--primary); color: var(--primary); padding: 5px 15px; font-size: 0.85rem; margin-left: 8px; border-radius: 20px; cursor: pointer; transition: 0.2s; }
       .map-switcher-btn.active { background: var(--primary); color: white; }
-
-      /* Views */
       .view-content { display: none; width: 100%; height: 100vh; box-sizing: border-box; }
       .view-content.active { display: block; }
       #view-map { padding-top: 0; }
       #map-container { width: 100%; height: 100vh; z-index: 1; }
       #view-list { padding-top: calc(100px + env(safe-area-inset-top)); background: var(--bg); overflow-y: auto; padding-bottom: 80px; }
-      
       .filter-bar { padding: 10px 20px; text-align: right; margin-top: 10px; }
       #tag-filter { padding: 5px; border-radius: 5px; border: 1px solid #b2ebf2; font-size: 14px; }
       #timeline-container { padding: 0 15px; max-width: 600px; margin: 0 auto; }
-      
       .timeline-card { background: var(--white); border-radius: 10px; padding: 15px; margin-bottom: 15px; display: flex; gap: 15px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
       .card-thumb { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; background: #eee; flex-shrink: 0; }
       .card-content { flex-grow: 1; overflow: hidden; }
@@ -98,28 +64,8 @@
       .card-date { font-size: 0.8rem; color: #888; margin-bottom: 5px; }
       .card-tags { display: flex; flex-wrap: wrap; gap: 5px; }
       .tag-chip { font-size: 0.7rem; background: #e0f2f1; color: #00695c; padding: 2px 8px; border-radius: 10px; }
-
-      /* FAB */
-      #fab-add { 
-        position: absolute; 
-        bottom: calc(30px + env(safe-area-inset-bottom));
-        right: 30px; 
-        width: 60px; 
-        height: 60px; 
-        border-radius: 50%; 
-        background: var(--primary); 
-        color: white; 
-        border: none; 
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
-        cursor: pointer; 
-        display: flex; 
-        justify-content: center; 
-        align-items: center; 
-        z-index: 20; 
-      }
+      #fab-add { position: absolute; bottom: calc(30px + env(safe-area-inset-bottom)); right: 30px; width: 60px; height: 60px; border-radius: 50%; background: var(--primary); color: white; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; display: flex; justify-content: center; align-items: center; z-index: 20; }
       #fab-add .material-icons { font-size: 32px; line-height: 1; }
-
-      /* Modal */
       #modal-overlay, #detail-modal, #loading { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
       .hidden { display: none !important; }
       .modal-content { background: var(--white); border-radius: 15px; width: 90%; max-width: 450px; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
@@ -127,7 +73,6 @@
       .modal-header h2 { margin: 0; font-size: 1.1rem; color: var(--dark); }
       .close-modal { font-size: 28px; color: #ccc; cursor: pointer; line-height: 1; padding: 5px; }
       .modal-body { padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-      
       .form-group { margin-bottom: 15px; }
       label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; color: var(--dark); }
       input, select, textarea { width: 100%; padding: 10px; border: 1px solid #b2ebf2; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: #fafafa; font-family: inherit; }
@@ -135,20 +80,15 @@
       .tag-checkbox { display: none; }
       .tag-label { padding: 5px 10px; border: 1px solid #b2ebf2; border-radius: 15px; font-size: 0.8rem; cursor: pointer; transition: 0.2s; }
       .tag-checkbox:checked + .tag-label { background: var(--primary); color: white; border-color: var(--primary); }
-      
       #detail-photos-container { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
       .detail-photo { width: 100%; border-radius: 8px; }
       .detail-memo { white-space: pre-wrap; margin-top: 10px; line-height: 1.5; }
-      
       .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
       .btn-cancel { background: #eceff1; color: #546e7a; padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
       .btn-save, .btn-edit { background: var(--primary); color: white; padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
-
       .spinner { width: 40px; height: 40px; border: 4px solid #fff; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
       #loading { flex-direction: column; color: white; }
       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-      @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-      
       .highcharts-data-label text { font-size: 9px !important; font-weight: normal !important; text-shadow: none !important; color: #546e7a !important; fill: #546e7a !important; }
     </style>
   </head>
@@ -166,13 +106,8 @@
 
     <div id="app-container" class="hidden-app">
       <header>
-        <!-- ★更新ボタン -->
-        <button id="reload-btn" onclick="reloadData()">
-          <span class="material-icons">refresh</span>
-        </button>
-
+        <button id="reload-btn" onclick="reloadData()"><span class="material-icons">refresh</span></button>
         <h1>SayaFumi Map</h1>
-        
         <div class="view-switcher">
           <button id="tab-map" class="active" onclick="switchView('map')"><span class="material-icons">map</span></button>
           <button id="tab-list" onclick="switchView('list')"><span class="material-icons">list</span></button>
@@ -182,11 +117,7 @@
       <div id="view-map" class="view-content active">
         <div class="controls-container">
           <div id="stats-bar">
-            <div class="stats-content">
-              <span id="stats-label">Japan</span>
-              <span id="stats-count">0/47</span>
-              <span id="stats-percent">0%</span>
-            </div>
+            <div class="stats-content"><span id="stats-label">Japan</span><span id="stats-count">0/47</span><span id="stats-percent">0%</span></div>
             <div class="progress-bg"><div id="progress-fill" style="width: 0%"></div></div>
           </div>
           <div class="map-controls">
@@ -203,7 +134,6 @@
         <div id="timeline-container"></div>
       </div>
 
-      <!-- モーダル (変更なし) -->
       <div id="modal-overlay" class="hidden">
         <div class="modal-content">
           <div class="modal-header"><h2 id="form-title">思い出を記録</h2><span class="close-modal" onclick="closeModal()">×</span></div>
@@ -235,9 +165,7 @@
       <div id="loading" class="hidden"><div class="spinner"></div><p>処理中...</p></div>
     </div>
 
-    <!-- Logic -->
     <script>
-      // ■ API通信関数
       async function callGAS(action, params = {}) {
         if (!GAS_API_URL) { alert("GAS URL設定エラー"); return; }
         params.password = appPassword;
@@ -249,13 +177,10 @@
           const json = await response.json();
           if (json.error) throw new Error(json.error);
           return json.result;
-        } catch (e) {
-          throw e;
-        }
+        } catch (e) { throw e; }
       }
 
-      // --- Variables ---
-      let currentMap = 'japan', currentView = 'map', chart, savedRecords = [], currentDetailRecord = null, appPassword = '', imageObserver = null;
+      let currentMap = 'japan', currentView = 'map', chart, savedRecords = [], currentDetailRecord = null, appPassword = '';
       const STORAGE_KEY = 'travel_app_pass';
       const COLOR_PALETTE = ['#4DD0E1', '#26C6DA', '#00BCD4', '#00ACC1', '#0097A7'];
       const WISH_COLOR = '#FFB74D';
@@ -265,9 +190,13 @@
       const NAME_TO_JP = {'Hokkaido':'北海道','Aomori':'青森県','Iwate':'岩手県','Miyagi':'宮城県','Akita':'秋田県','Yamagata':'山形県','Fukushima':'福島県','Ibaraki':'茨城県','Tochigi':'栃木県','Gunma':'群馬県','Saitama':'埼玉県','Chiba':'千葉県','Tokyo':'東京都','Kanagawa':'神奈川県','Niigata':'新潟県','Toyama':'富山県','Ishikawa':'石川県','Fukui':'福井県','Yamanashi':'山梨県','Nagano':'長野県','Gifu':'岐阜県','Shizuoka':'静岡県','Aichi':'愛知県','Mie':'三重県','Shiga':'滋賀県','Kyoto':'京都府','Osaka':'大阪府','Hyogo':'兵庫県','Nara':'奈良県','Wakayama':'和歌山県','Tottori':'鳥取県','Shimane':'島根県','Okayama':'岡山県','Hiroshima':'広島県','Yamaguchi':'山口県','Tokushima':'徳島県','Kagawa':'香川県','Ehime':'愛媛県','Kochi':'高知県','Fukuoka':'福岡県','Saga':'佐賀県','Nagasaki':'長崎県','Kumamoto':'熊本県','Oita':'大分県','Miyazaki':'宮崎県','Kagoshima':'鹿児島県','Okinawa':'沖縄県'};
       const TAG_LIST = ['温泉', 'グルメ', '絶景', '宿', '観光', '記念日', 'ドライブ', 'グランピング', 'アミューズメント', '誕生日', 'クリスマス', '行きたい'];
 
+      // 画像キャッシュ用
+      const imageCache = {};
+      let loadQueue = [];
+      let isQueueRunning = false;
+
       document.addEventListener('DOMContentLoaded', () => {
         setupTags();
-        initImageObserver();
         
         const urlParams = new URLSearchParams(window.location.search);
         const auth = urlParams.get('auth');
@@ -275,37 +204,13 @@
             localStorage.setItem(STORAGE_KEY, auth);
             window.history.replaceState({}, document.title, window.location.pathname);
         }
-
         const savedPass = localStorage.getItem(STORAGE_KEY);
         if (savedPass) {
           document.getElementById('login-pass').value = savedPass;
-          const btn = document.querySelector('.login-box button');
-          btn.innerText = '自動ログイン中...';
-          btn.disabled = true;
+          document.querySelector('.login-box button').innerText = '自動ログイン中...';
           tryLogin();
         }
       });
-
-      function initImageObserver() {
-        if ('IntersectionObserver' in window) {
-          imageObserver = new IntersectionObserver((entries, obs) => {
-            entries.forEach(entry => {
-              if (entry.isIntersecting) {
-                const img = entry.target;
-                const photoId = img.dataset.photoId;
-                if (photoId) {
-                  callGAS('fetchPhoto', { photoId: photoId }).then(base64 => {
-                    img.src = base64 || 'https://via.placeholder.com/80?text=No+Image';
-                    img.style.opacity = 0;
-                    setTimeout(() => { img.style.transition='opacity 0.5s'; img.style.opacity=1; },50);
-                  });
-                  obs.unobserve(img);
-                }
-              }
-            });
-          });
-        }
-      }
 
       function setupTags() {
         const container = document.getElementById('tags-checkboxes');
@@ -325,7 +230,6 @@
         const inputPass = document.getElementById('login-pass').value;
         const errorMsg = document.getElementById('login-error');
         const btn = document.querySelector('.login-box button');
-        
         if(!inputPass) return;
         appPassword = inputPass;
 
@@ -337,6 +241,14 @@
             document.getElementById('app-container').classList.add('visible-app');
             savedRecords = data || [];
             
+            // ■ 追加: サムネイルIDを収集してバックグラウンド読み込み開始
+            savedRecords.forEach(r => {
+                if (r.photoIds && r.photoIds.length > 0) {
+                    loadQueue.push(r.photoIds[0]); // 各レコードの1枚目をキューへ
+                }
+            });
+            processQueue(); // 読み込み開始
+
             setTimeout(() => {
               drawMap();
               updateStats();
@@ -355,8 +267,39 @@
           });
       }
 
-      // ★データ更新関数（Promiseを返す）
+      // ★ 追加: バックグラウンド画像読み込み処理
+      async function processQueue() {
+        if (isQueueRunning || loadQueue.length === 0) return;
+        isQueueRunning = true;
+
+        const photoId = loadQueue.shift();
+        if (!imageCache[photoId]) {
+            try {
+                const base64 = await callGAS('fetchPhoto', { photoId: photoId });
+                if (base64) {
+                    imageCache[photoId] = base64;
+                    // すでに表示されている画像があれば更新
+                    const imgs = document.querySelectorAll(`img[data-photo-id="${photoId}"]`);
+                    imgs.forEach(img => {
+                        img.src = base64;
+                        img.style.opacity = 0;
+                        setTimeout(() => { img.style.transition='opacity 0.5s'; img.style.opacity=1; }, 50);
+                    });
+                }
+            } catch(e) {
+                console.error("BG Load Error:", e);
+            }
+        }
+        
+        isQueueRunning = false;
+        // 次の処理へ (少し間隔をあける)
+        if (loadQueue.length > 0) {
+            setTimeout(processQueue, 200); 
+        }
+      }
+
       function fetchDataAndDraw() {
+        // 裏で更新するだけなのでLoadingは出さない
         return callGAS('getTravelData')
           .then(data => {
             savedRecords = data || [];
@@ -364,22 +307,25 @@
             updateStats();
             updateRegionSelect();
             renderList();
+            
+            // 新規データをキューに追加
+            savedRecords.forEach(r => {
+                if (r.photoIds && r.photoIds.length > 0 && !imageCache[r.photoIds[0]]) {
+                    loadQueue.push(r.photoIds[0]);
+                }
+            });
+            processQueue();
           })
           .catch(err => {
-            alert('データ更新失敗: ' + err.message);
+            console.error('Data update error:', err);
           });
       }
 
-      // ★リロードボタンの処理
       function reloadData() {
         const icon = document.querySelector('#reload-btn .material-icons');
         icon.classList.add('spin-anim');
-        // fetchDataAndDrawの完了を待って回転を止める
         fetchDataAndDraw().finally(() => {
-            // 最低500msは回して「やってる感」を出す
-            setTimeout(() => {
-                icon.classList.remove('spin-anim');
-            }, 500);
+            setTimeout(() => { icon.classList.remove('spin-anim'); }, 500);
         });
       }
 
@@ -441,6 +387,7 @@
         currentMap = type;
         document.getElementById('btn-japan').classList.toggle('active', type === 'japan');
         document.getElementById('btn-world').classList.toggle('active', type === 'world');
+        if (chart) { chart.destroy(); chart = undefined; }
         drawMap();
         updateRegionSelect();
         setTimeout(updateStats, 100);
@@ -570,7 +517,6 @@
         });
       }
 
-      // 画像リサイズ
       function resizeImage(file, maxWidth) {
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -598,7 +544,6 @@
         });
       }
 
-      // モーダル
       function openModal(preSelectedKey=null, editData=null) {
         document.getElementById('modal-overlay').classList.remove('hidden');
         const form = document.getElementById('record-form');
@@ -720,8 +665,9 @@
                 callGAS('saveRecord', params)
                     .then(res => {
                         closeModal();
-                        fetchDataAndDraw();
+                        toggleLoading(false);
                         alert(res.mode==='update' ? '修正しました！' : '記録しました！');
+                        fetchDataAndDraw(); // 裏で更新
                     })
                     .catch(err => {
                         toggleLoading(false);
@@ -748,12 +694,17 @@
             card.onclick = () => showDetail(r);
             const img = document.createElement('img');
             img.className = 'card-thumb';
-            img.src = 'https://via.placeholder.com/80?text=Loading';
-            if(r.photoIds && r.photoIds.length>0) {
-                img.dataset.photoId = r.photoIds[0];
-                if(imageObserver) imageObserver.observe(img);
+            // キャッシュチェック
+            if(r.photoIds && r.photoIds.length>0 && imageCache[r.photoIds[0]]) {
+                img.src = imageCache[r.photoIds[0]];
             } else {
-                img.src = 'https://via.placeholder.com/80?text=No+Image';
+                img.src = 'https://via.placeholder.com/80?text=Loading';
+                if(r.photoIds && r.photoIds.length>0) {
+                    img.dataset.photoId = r.photoIds[0];
+                    // まだロードされていなければ優先ロード(Observerは使わずQueueに任せるが、表示領域に入ったものは優先したい場合はここでkickする手もある)
+                } else {
+                    img.src = 'https://via.placeholder.com/80?text=No+Image';
+                }
             }
             
             const content = document.createElement('div');
